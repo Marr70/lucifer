@@ -240,13 +240,16 @@ function main()
             if bot.status == BotStatus.online then
                 sleep(2500)
                 process_auto_geiger()
-                if done then break end
+                if done then 
+                    done = false
+                    break 
+                end
             else
                 sleep(15000)
                 connect()
             end
         end
-
+    
         if bot:getInventory():getItemCount(2286) > 0 then
             warp(dead, dead_id)
             sleep(200)
