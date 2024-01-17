@@ -1,0 +1,275 @@
+alive, alive_id = alive_world:match("([^:]+):([^:]+)")
+dead, dead_id = dead_world:match("([^:]+):([^:]+)")
+lumi, lumi_id = luminous_world:match("([^:]+):([^:]+)")
+storage, storage_id = storage_world:match("([^:]+):([^:]+)")
+done = false
+items = {6416, 3196, 1500, 1498, 2806, 2804, 8270, 8272, 8274, 4676, 4678, 4680, 4682, 4652, 4650, 4648, 4646, 11186,10086, 10084,2206, 2244, 2246, 2242, 2248, 2250, 3792, 3306, 4654, 3204}
+
+bot_list = {}
+for line in account_list:gmatch("[^\n]+") do
+    line = line:gsub("%s", "")
+    table.insert(bot_list, line)
+end
+
+function round(n)
+    return n % 1 > 0.5 and math.ceil(n) or math.floor(n)
+end
+
+function take(id)
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if obj.id == id and #bot:getPath(obj.x//32, obj.y//32) > 0 then
+            bot:findPath(round(obj.x/32) - 1, obj.y//32)
+            sleep(1000)
+            bot:collectObject(obj.oid, 2)
+            sleep(500)
+        end
+        if bot:getInventory():findItem(id) > 0 then
+            break
+        end
+    end
+end
+
+function tile_drop(x,y,ids,value)
+    local stack = 0
+    local count = 0
+    local store = {}
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if obj.x//32 == x and obj.y//32 == y then
+            stack = stack + 1
+            count = count + obj.count
+            if store[obj.id] then
+                store[obj.id] = store[obj.id] + obj.count
+            else
+                store[obj.id] = obj.count
+            end
+        end
+    end
+
+    if count <= (4000-value) then
+        if stack < 19 then
+            return true
+        end
+        for objId, itm in pairs(store) do
+            if objId == ids then
+                if math.ceil(itm%200) ~= 0 and math.ceil(itm%200) <= (200-value) then
+                    return true
+                else
+                    return false
+                end
+            end
+        end
+    end
+    return false
+end
+
+function drop_item(id)
+    for _,tile in pairs(bot:getWorld():getTiles()) do
+        if tile.fg == pos_drop and #bot:getPath(tile.x, tile.y) > 0 then
+            if tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id)) then
+                bot:findPath(tile.x-1, tile.y)
+                sleep(1000)
+                while bot:getInventory():findItem(id) > 0 and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id)) do
+                    bot:drop(id, bot:getInventory():findItem(id))
+                    sleep(3000)
+                end
+            end
+        end
+        if bot:getInventory():findItem(id) == 0 then
+            break
+        end
+    end
+end
+
+function warp(world, id)
+    while bot:getWorld().name:lower() ~= world:lower() do
+        bot:warp(world)
+        sleep(warp_interval)
+        if bot.status ~= BotStatus.online then
+            connect()
+            bot:warp(world)
+            sleep(warp_interval)
+        end
+    end
+    if id == nil or id == "" then
+        return
+    end
+    if bot:isInWorld() then
+        while bot:getWorld():getTile(bot.x, bot.y).fg == 6 do
+            bot:warp(world, id)
+            sleep(warp_interval)
+            if bot.status ~= BotStatus.online then
+                connect()
+                bot:warp(world, id)
+                sleep(warp_interval)
+            end
+        end
+    end
+end
+
+function check_inventory()
+    for _,item in pairs(items) do
+        if bot:getInventory():findItem(item) > 0 then
+            return item
+        end
+    end
+    return 0
+end
+
+function contains(table, value)
+    for i, element in pairs(table) do
+        if element == value then
+            return true
+        end
+    end
+    return false
+end
+
+function is_valid()
+    local valid_status_list = {BotStatus.offline, BotStatus.online, BotStatus.version_update, BotStatus.server_overload, BotStatus.server_busy, BotStatus.too_many_login, BotStatus.error_connecting, BotStatus.logon_fail, BotStatus.changing_subserver}
+    return contains(valid_status_list, bot.status)
+end
+
+function connect()
+    while bot.status ~= BotStatus.online do
+        bot:connect()
+        sleep(20000)
+        if not is_valid() then
+            sleep(400)
+            return
+        end
+    end
+end
+
+function random_name(length)
+    while true do
+        jelek = false
+        local bad_name = {'fuc','fck','uck','vck','fuk','fug','fag','bob','dick','dck','b0b','sex','s3x','gay','g4y','bitch','dick','d1ck'}
+        local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        local name = ""
+        for i = 1, length do
+            local index = math.random(#letters)
+            name = name .. string.sub(letters, index, index)
+        end
+        for _,bn in pairs(bad_name) do
+            if name:upper():find(bn:upper()) then
+                jelek = true
+            end
+        end
+        if not jelek then 
+            return name
+        end
+    end
+end
+
+function process_auto_geiger()
+    item = check_inventory()
+    if item > 0 then
+        bot.auto_geiger.enabled = false
+        warp(storage, storage_id)
+        sleep(200)
+        drop_item(item)
+    else
+        if bot:getInventory():getItem(2286).isActive then
+            done = true
+            return
+        end
+        warp(geiger_world)
+        sleep(200)
+        bot.auto_geiger.enabled = true
+        while not bot:getInventory():getItem(2286).isActive do
+            sleep(500)
+            if bot.status ~= BotStatus.online then
+                bot.auto_geiger.enabled = false
+                connect()
+                return
+            end
+        end
+    end
+    sleep(500)
+end
+
+function main()
+    for _,player in pairs(bot_list) do
+        if player:find("|") then
+            local mac,rid = player:match("(.-)|(.+)")
+            bot = addBot(random_name(6), mac, rid)
+            sleep(500)
+            bot.auto_collect = false
+            bot.auto_reconnect = false
+            sleep(8000)
+            connect()
+        elseif player:find(":") then
+            local user, pass = player:match("([^:]+):([^:]+)")
+            bot = addBot(user, pass)
+            sleep(500)
+            bot.auto_collect = false
+            bot.auto_reconnect = false
+            sleep(8000)
+            connect()
+        end
+
+        if bot:getInventory():getItemCount(2204) == 0 then
+            warp(alive, alive_id)
+            sleep(200)
+            take(2204)
+            sleep(200)
+            if bot:getInventory():getItemCount(2204) > 1 then
+                bot:setDirection(false)
+                sleep(500)
+                bot:drop(2204, bot:getInventory():getItemCount(2204) - 1)
+                sleep(3000)
+            end
+            while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
+                bot:wear(2204)
+                sleep(1500)
+            end
+        end
+
+        if bot:getInventory():getItemCount(6848) == 0 then
+            warp(lumi, lumi_id)
+            sleep(200)
+            take(6848)
+            sleep(200)
+            while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
+                bot:wear(6848)
+                sleep(1500)
+            end
+        end
+
+        while is_valid() do
+            if bot.status == BotStatus.online then
+                sleep(2500)
+                process_auto_geiger()
+                if done then break end
+            else
+                sleep(15000)
+                connect()
+            end
+        end
+
+        if bot:getInventory():getItemCount(2286) > 0 then
+            warp(dead, dead_id)
+            sleep(200)
+            drop_item(2286)
+            sleep(200)
+        end
+
+        if bot:getInventory():getItemCount(6848) > 0 then
+            warp(lumi, lumi_id)
+            sleep(200)
+            drop_item(6848)
+            sleep(200)
+        end
+
+        sleep(1000)
+        removeBot(bot.name)
+    end
+end
+
+if proxy ~= nil and proxy ~= "" then
+    manager = getProxyManager()
+    manager:setLimit(2)
+    manager:addProxy(proxy)
+end
+
+main()
