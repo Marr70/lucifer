@@ -1,0 +1,303 @@
+bot = getBot()
+stock_value = 0
+gacukup = false
+
+function sendWH(message)
+    wh = Webhook.new(webhook_url)
+    wh.embed1.use = true
+    wh.embed1.color = 0x2bb52f
+    wh.embed1.title = "Lucifer Autobuy Logs"
+    wh.embed1.description = message
+    wh:send()
+end
+
+function checkwl()
+    return (bot:getInventory():findItem(1796) * 100) + bot:getInventory():findItem(242)
+end
+
+function vbuy(x,y,price,id)
+    local inventory = bot:getInventory():findItem(id)
+    local totalwl = checkwl()
+    local count = 0
+    if price < 0 then
+        if stock_value < (200-inventory) then
+            local totalprice = math.floor(stock_value / math.abs(price))
+            if totalprice > totalwl then
+                totalprice = totalwl
+            end
+            count = (totalprice * math.abs(price))
+            if count == 0 then
+                stock_value = 0
+                gacukup = true
+                return
+            end
+            print(totalwl)
+            print(count)
+            print(totalprice)
+        else
+            local totalprice = math.floor((200 - inventory) / math.abs(price))
+            if totalprice > totalwl then
+                totalprice = totalwl
+            end
+            count = (totalprice * math.abs(price))
+            if count == 0 then
+                stock_value = 0
+                gacukup = true
+                return
+            end
+            print(totalwl)
+            print(count)
+            print(totalprice)
+        end
+    elseif price > 0 then
+        if stock_value < (200-inventory) then
+            local totalprice = (stock_value * price)
+            count = stock_value
+            if totalprice > totalwl then
+                count = math.floor(totalwl/price)
+                totalprice = count * price
+            end
+            if count == 0 then
+                stock_value = 0
+                gacukup = true
+                return
+            end
+            print(totalwl)
+            print(count)
+            print(totalprice)
+        else
+            local totalprice = ((200 - inventory) * price)
+            count = (200 - inventory)
+            if totalprice > totalwl then
+                count = math.floor(totalwl/price)
+                totalprice = count * price
+            end
+            if count == 0 then
+                stock_value = 0
+                gacukup = true
+                return
+            end
+            print(totalwl)
+            print(count)
+            print(totalprice)
+        end
+    end
+    sleep(500)
+    bot:sendPacket(2, "action|dialog_return\ndialog_name|vending\ntilex|"..x.."|\ntiley|"..y.."|\nexpectprice|"..price.."|\nexpectitem|"..id.."|\nbuycount|"..count)
+    sleep(500)
+    bot:sendPacket(2, "action|dialog_return\ndialog_name|vending\ntilex|"..x.."|\ntiley|"..y.."|\nverify|1|\nbuycount|"..count.."|\nexpectprice|"..price.."|\nexpectitem|"..id.."|")
+    sleep(500)
+    stock_value = 0
+end
+
+function warp(to, id)
+    while bot:getWorld().name:upper() ~= to:upper() do
+        bot:sendPacket(3,"action|join_request\nname|"..to:upper().."\ninvitedWorld|0")
+        sleep(5000)
+    end
+    if id == "" or id == nil then
+        return
+    end
+    while bot:getWorld():getTile(math.floor(getLocal().posx/32), math.floor(getLocal().posy/32)).fg == 6 do
+        bot:sendPacket(3,"action|join_request\nname|"..to:upper().."|"..id:upper().."\ninvitedWorld|0")
+        sleep(5000)
+    end
+end
+
+function hook(var, netid)
+    if var:get(0):getString() == "OnDialogRequest" then
+        if var:get(1):getString():find("The machine contains") then
+            stock_value = var:get(1):getString():match("a total of (%d+)")
+            stock_value = tonumber(stock_value)
+        end
+    end
+end
+
+function checkvends()
+    for _,tile in pairs(bot:getWorld():getTiles()) do
+        if tile.fg == 2978 then
+            for _,item in pairs(list_item) do
+                if tile:getExtra().id == item then
+                    if tile:getExtra().item_price <= maximum_price then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    return false
+end
+
+function process_buy_item()
+    if #list_world == 0 then
+        sendWH("All vend worlds are out of stock (script stopped) \n@everyone")
+        sleep(1000)
+        bot:warp("EXIT")
+        sleep(3000)
+        bot:stopScript()
+    end
+    for indexWorld,world in pairs(list_world) do
+        checkgoods()
+        sleep(1000)
+        warp(world)
+        sleep(500)
+        if not checkvends() then
+            table.remove(list_world, indexWorld)
+            break
+        end
+
+        for _,tile in pairs(bot:getWorld():getTiles()) do
+            if tile.fg == 2978 and tile:getExtra().id ~= 0 then
+                for _,item in pairs(list_item) do
+                    if tile:getExtra().id == item then
+                        if maximum_price < 0 then
+                            if bot:getInventory():findItem(item) + math.abs(maximum_price) > 200 then
+                                break
+                            end
+                        end
+                        if tile:getExtra().item_price <= maximum_price then
+                            if bot:findPath(tile.x, tile.y) then
+                                sleep(1500)
+                                bot:wrench(bot.x,bot.y)
+                                listenEvents(2)
+                                while stock_value == 0 do
+                                    sleep(500)
+                                end
+                                vbuy(tile.x, tile.y, tile:getExtra().item_price, item)
+                                sleep(500)
+                                if gacukup then
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+function getpos()
+    local pos = {
+        x = math.floor(getLocal().posx/32),
+        y = math.floor(getLocal().posy/32)
+    }
+    return pos
+end
+
+function tileDrop(x,y,ids,value)
+    local stack = 0
+    local count = 0
+    local store = {}
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if math.floor(obj.x/32) == x and math.floor(obj.y/32) == y then
+            stack = stack + 1
+            count = count + obj.count
+            if store[obj.id] then
+                store[obj.id] = store[obj.id] + obj.count
+            else
+                store[obj.id] = obj.count
+            end
+        end
+    end
+
+    if count <= (4000-value) then
+        if stack < 19 then
+            return true
+        end
+        for objId, itm in pairs(store) do
+            if objId == ids then
+                if math.ceil(itm%200) ~= 0 and math.ceil(itm%200) <= (200-value) then
+                    return true
+                else
+                    return false
+                end
+            end
+        end
+    end
+    return false
+end
+
+function droprata(id)
+    for y = 53,0,-1 do
+        for x = 1,99 do
+            if y <= getpos().y and x > getpos().x then
+                if tileDrop(x,y,id, bot:getInventory():findItem(id)) then
+                    if not bot:isInTile(x+1,y) then
+                        bot:findPath(x+1,y)
+                        sleep(1000)
+                    end
+                    bot:setDirection(true)
+                    sleep(1000)
+                    while bot:getInventory():findItem(id) > 0 and tileDrop(x,y,id, bot:getInventory():findItem(id)) do
+                        bot:drop(id, bot:getInventory():findItem(id))
+                        sleep(3000)
+                    end
+                end
+                if bot:getInventory():findItem(id) == 0 then
+                    return
+                end
+            end
+        end  
+    end
+end
+
+function checkgoods()
+    for _,item in pairs(list_item) do
+        if bot:getInventory():findItem(item) > 0 then
+            warp(world_save, id_door_save)
+            sleep(1000)
+
+            while bot:getInventory():findItem(item) > 0 do
+                droprata(item)
+            end
+        end
+    end
+end
+
+function round(n)
+    return n % 1 > 0.5 and math.ceil(n) or math.floor(n)
+end
+
+function waitforwl()
+    warp(world_save, id_door_save)
+    sleep(1000)
+    local wlsaatini = checkwl()
+    sendWH("BOT runs out of world lock, bot will wait in "..bot:getWorld().name:upper().."\n@everyone")
+    sleep(1000)
+
+    while checkwl() == wlsaatini do
+        for _,obj in pairs(bot:getWorld():getObjects()) do
+            if obj.id == 1796 or obj.id == 242 then
+                if bot:findPath(round(obj.x/32), math.floor(obj.y/32)) then
+                    sleep(1000)
+                    bot:collectObject(obj.oid, 2)
+                    sleep(500)
+                    break
+                end
+            end
+        end
+    end
+    sleep(1000)
+    bot:respawn()
+    sleep(3000)
+end
+
+function main()
+    while true do
+        checkgoods()
+        sleep(1000)
+        if checkwl() > maximum_price and checkwl() ~= 0 then
+            process_buy_item()
+            if gacukup then
+                gacukup = false
+                waitforwl()
+            end
+        else
+            waitforwl()
+        end
+    end
+end
+
+addEvent(Event.variantlist, hook)
+main()
