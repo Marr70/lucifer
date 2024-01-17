@@ -1,0 +1,224 @@
+bot = getBot()
+charging = false
+items = {6416, 3196, 1500, 1498, 2806, 2804, 8270, 8272, 8274, 4676, 4678, 4680, 4682, 4652, 4650, 4648, 4646, 11186,10086, 10084,2206, 2244, 2246, 2242, 2248, 2250, 3792, 3306, 4654, 3204}
+waktu = os.time()
+
+world_list = {}
+for line in geiger_worlds:gmatch("[^\n]+") do
+    local trim = line:match("^%s*(.-)%s*$"):gsub("[^a-zA-Z0-9]", "")
+    table.insert(world_list, trim)
+end
+
+if script_id > #world_list then
+    error("Sorry, reached geiger world limit.")
+end
+
+storage = storage_worlds[((script_id-1) % #storage_worlds) + 1]
+geiger_world = world_list[script_id]
+
+wh = Webhook.new(webhook_url)
+wh.embed1.use = true
+wh.embed1.title = "Lucifer Geiger Logs"
+wh.embed1.footer.text = "Maliketh's"
+wh.embed1.footer.icon_url = "https://cdn.discordapp.com/attachments/1195541835565772864/1196306719815499816/Verify.gif?ex=65b72674&is=65a4b174&hm=918bddbf94b6c6da7925c759f7f01183cf730206a925911d57be5dd54253cd1a&"
+
+function log_msg(message)
+    print(string.format("[AutoGeiger]: %s\n", message))
+    if webhook_enabled then
+        if bot.status ~= BotStatus.online then
+            wh.embed1.color = 0xff0000
+            wh.embed1.description = string.format("**[%s]** %s", bot.name, message)
+            wh:send()
+        elseif bot.status == BotStatus.online then
+            wh.embed1.color = 0x00ff00
+            wh.embed1.description = string.format("**[%s]** %s\n\nScript running since: **<t:%i:R>**", bot.name, message, waktu)
+            wh:send()
+        end
+    end
+end
+
+function go_back()
+    if not bot:isInWorld(geiger_world) then
+        warp(geiger_world)
+        sleep(warp_interval)
+        return false
+    end
+    return true
+end
+
+function warp(world, id)
+    while bot:getWorld().name:lower() ~= world:lower() do
+        bot:warp(world)
+        sleep(warp_interval)
+        if bot.status ~= BotStatus.online then
+            connect()
+            bot:warp(world)
+            sleep(warp_interval)
+        end
+    end
+
+    if bot:isInWorld() and id and id ~= "" then
+        while getTile(bot.x, bot.y).fg == 6 do
+            bot:warp(world, id)
+            sleep(warp_interval)
+            if bot.status ~= BotStatus.online then
+                connect()
+                bot:warp(world, id)
+                sleep(warp_interval)
+            end
+        end
+    end
+end
+
+function drop_item(item)
+    if storage.enabled then
+        warp(storage.name, storage.id)
+        sleep(100)
+    else
+        go_back()
+    end
+
+    player = getLocal()
+    if not player then
+        sleep(200)
+        return
+    end
+
+    if storage.enabled then
+        if not bot:isInTile(storage.x , storage.y) and #bot:getPath(storage.x, storage.y) > 0 then
+            bot:findPath(storage.x, storage.y)
+            sleep(2000)
+            return
+        end
+    else
+        if not bot:isInTile(50, 53) then
+            bot:findPath(50, 53)
+            sleep(2000)
+            return
+        end
+    end
+
+    item_count = getInventory():findItem(item)
+    if item_count > 0 then
+        log_msg(string.format("Dropping Reward: %ix %s", item_count, getInfo(item).name))
+        bot:drop(item, item_count)
+        sleep(3000)
+    end
+end
+
+function contains(table, value)
+    for i, element in pairs(table) do
+        if element == value then
+            return true
+        end
+    end
+    return false
+end
+
+function check_inventory()
+    inventory = getInventory()
+    for i, item in pairs(items) do
+        if trash_bad_item then
+            if inventory:findItem(item) > 0 then
+                if contains(bad_items, item) then
+                    sleep(200)
+                    bot:trash(item, inventory:findItem(item))
+                    sleep(200)
+                    log_msg(string.format("Trashed %s", getInfo(item).name))
+                    sleep(1000)
+                else
+                    return item
+                end
+            end
+        else
+            if inventory:findItem(item) > 0 then
+                return item
+            end
+        end
+    end
+
+    return 0
+end
+
+function process_auto_geiger()
+    item = check_inventory()
+    if item > 0 then
+        bot.auto_geiger.enabled = false
+        drop_item(item)
+    else
+        warp(geiger_world)
+        sleep(100)
+        if bot:getInventory():getItem(2286).isActive then
+            print(string.format("%s Charging", bot.name))
+            if not bot:isInWorld(geiger_world) then
+                warp(geiger_world)
+                sleep(100)
+            end
+            while bot:getWorld():getTile(bot.x, bot.y).fg ~= 6 do
+                bot:respawn()
+                sleep(7000)
+            end
+            while bot:getInventory():findItem(2204) == 0 and bot:getInventory():findItem(2286) > 0 do
+                sleep(5000)
+                if bot.status ~= BotStatus.online then
+                    connect()
+                    warp(geiger_world)
+                    sleep(100)
+                end
+                if bot:getInventory():getItemCount(2204) > 0 then
+                    while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
+                        bot:wear(2204)
+                        sleep(1500)
+                    end
+                    charging = false
+                    break
+                end
+            end
+        end
+        bot.auto_geiger.enabled = true
+        while not bot:getInventory():getItem(2286).isActive do
+            sleep(500)
+            if bot.status ~= BotStatus.online then
+                bot.auto_geiger.enabled = false
+                connect()
+                return
+            end
+        end
+    end
+    sleep(500)
+end
+
+function is_valid()
+    local valid_status_list = {BotStatus.offline, BotStatus.online, BotStatus.version_update, BotStatus.server_overload, BotStatus.server_busy, BotStatus.too_many_login, BotStatus.error_connecting, BotStatus.logon_fail, BotStatus.changing_subserverr}
+
+    return contains(valid_status_list, bot.status)
+end
+
+function connect()
+    log_msg("Reconnecting")
+    while bot.status ~= BotStatus.online do
+        bot:connect()
+        sleep(30000)
+        if not is_valid() then
+            log_msg("Bot banned")
+            sleep(400)
+            return
+        end
+    end
+    log_msg("Successfully Reconnected")
+end
+
+function main()
+    while is_valid() do
+        if bot.status == BotStatus.online then
+            sleep(2500)
+            process_auto_geiger()
+        else
+            sleep(15000)
+            connect()
+        end
+    end
+end
+
+bot.auto_collect = false
+main()
