@@ -1,0 +1,145 @@
+bot = getBot()
+
+emote_list = {"love","troll","cheer","furious","lol","yes","no","sassy"}
+detect = false
+c_own = false
+c_ban = false
+
+
+function hook(var, netid)
+    if var:get(0):getString() == "OnConsoleMessage" and var:get(1):getString():find("World Locked") then
+        owner = var:get(1):getString():match("World Locked`` by (%a+)")
+        print(owner)
+    end
+    if var:get(0):getString() == "OnConsoleMessage" and var:get(1):getString():find(">>`4Spam detected!") then
+        detect = true
+        print("detected")
+    elseif var:get(0):getString() == "OnConsoleMessage" and var:get(1):getString():find(string.format("`4world bans`` %s", getBot().name)) then
+        c_ban = true
+        print("got banned")
+    elseif var:get(0):getString() == "OnConsoleMessage" and var:get(1):getString():find("You've been banned") then
+        c_ban = true
+        print("got banned")
+    end
+end
+
+addEvent(Event.variantlist, hook)
+
+function emote()
+    if random_emote then
+        bot:say("/"..emote_list[math.random(1,#emote_list)])
+    end
+end
+
+function warp(world, id)
+    while bot:getWorld().name:lower() ~= world:lower() do
+        bot:warp(world)
+        listenEvents(7)
+        if c_ban then
+            return
+        end
+    end
+    if id == nil or id == "" then
+        return
+    end
+    if bot:isInWorld() then
+        while getTile(bot.x, bot.y).fg == 6 do
+            bot:warp(world,id)
+            sleep(7000)
+        end
+    end
+end
+
+function randomName(length)
+    while true do
+        jelek = false
+        local bad_name = {'fuc','fck','uck','vck','fuk','fug','fag','bob','dick','dck','b0b','sex','s3x','gay','g4y','bitch','dick','d1ck'}
+        local letters = "abcdefghijklmnopqrstuvwxyz1234567890"
+        local name = ""
+        for i = 1, length do
+            local index = math.random(#letters)
+            name = name .. string.sub(letters, index, index)
+        end
+        for _,bn in pairs(bad_name) do
+            if name:upper():find(bn:upper()) then
+                jelek = true
+            end
+        end
+        if not jelek then 
+            return name
+        end
+    end
+end
+
+function spam()
+	for _,text in pairs(spam_text) do
+        bot:say(text)
+		    listenEvents(delay_spam/1000)
+        emote()
+
+        if not bot:isInWorld() then
+            return
+        end
+        if autoleave_on_owner then
+            for _,player in pairs(bot:getWorld():getPlayers()) do
+                if player.name == owner then
+                    local wurld = randomName(9)
+                    sleep(100)
+                    bot:warp(wurld)
+                    sleep(7000)
+                    print("Owner detected, will go to randomworld for 1 minute")
+                    sleep(53000)
+                    return
+                end
+            end
+        end
+        if detect then
+            print("Spam detected, will wait for "..(delay_detect/1000).." seconds")
+            sleep(delay_detect)
+            detect = false
+        end
+	end
+end
+
+function main()
+    if bot:isInWorld() then
+        bot:leaveWorld()
+        sleep(7000)
+    end
+    while true do
+        if bot:getWorld().name:lower() ~= world_spam:lower() then
+            warp(world_spam)
+            sleep(100)
+            if c_ban then
+                local wurld = randomName(9)
+                bot:warp(wurld)
+                sleep(7000)
+
+                sleep(113000)
+                c_ban = false
+            end
+        end
+        if custom_pos then
+            if #bot:getPath(pos_x, pos_y) > 0 then
+                bot:findPath(pos_x, pos_y)
+                sleep(1500)
+            else
+                for _,tile in pairs(getTiles()) do
+                    if tile.fg == 762 and #bot:getPath(tile.x, tile.y) > 0 then
+                        local pass = tile:getExtra().label:match(":(.+)"):gsub("%s", "")
+                        bot:findPath(tile.x, tile.y)
+                        sleep(2000)
+                        bot:enter(pass)
+                        sleep(3000)
+                    end
+                end
+                if #bot:getPath(pos_x, pos_y) > 0 then
+                    bot:findPath(pos_x, pos_y)
+                    sleep(1500)
+                end
+            end
+        end
+        spam()
+    end
+end
+main()
