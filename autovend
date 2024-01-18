@@ -115,7 +115,7 @@ end
 
 function checkvends()
     for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == 2978 then
+        if tile.fg == 2978 or tile.fg == 9268 then
             for _,item in pairs(list_item) do
                 if tile:getExtra().id == item then
                     if tile:getExtra().item_price <= maximum_price then
@@ -147,7 +147,7 @@ function process_buy_item()
         end
 
         for _,tile in pairs(bot:getWorld():getTiles()) do
-            if tile.fg == 2978 and tile:getExtra().id ~= 0 then
+            if (tile.fg == 2978 or tile.fg == 9268) and tile:getExtra().id ~= 0 then
                 for _,item in pairs(list_item) do
                     if tile:getExtra().id == item then
                         if maximum_price < 0 then
