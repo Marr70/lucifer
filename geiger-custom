@@ -1,6 +1,3 @@
-alive, alive_id = alive_world:match("([^:]+):([^:]+)")
-dead, dead_id = dead_world:match("([^:]+):([^:]+)")
-lumi, lumi_id = luminous_world:match("([^:]+):([^:]+)")
 storage, storage_id = storage_world:match("([^:]+):([^:]+)")
 done = false
 items = {6416, 3196, 1500, 1498, 2806, 2804, 8270, 8272, 8274, 4676, 4678, 4680, 4682, 4652, 4650, 4648, 4646, 11186,10086, 10084,2206, 2244, 2246, 2242, 2248, 2250, 3792, 3306, 4654, 3204}
@@ -17,11 +14,11 @@ end
 
 function take(id)
     for _,obj in pairs(bot:getWorld():getObjects()) do
-        if obj.id == id and #bot:getPath(obj.x//32, obj.y//32) > 0 then
-            bot:findPath(round(obj.x/32) - 1, obj.y//32)
+        if obj.id == id and #bot:getPath(round(obj.x/32) + 1, obj.y//32) > 0 then
+            bot:findPath(round(obj.x/32) + 1, obj.y//32)
             sleep(1000)
             bot:collectObject(obj.oid, 2)
-            sleep(500)
+            sleep(take_delay)
         end
         if bot:getInventory():findItem(id) > 0 then
             break
@@ -62,15 +59,79 @@ function tile_drop(x,y,ids,value)
     return false
 end
 
-function drop_item(id)
+function cek_pos()
+	local count = 0
+	local ceky = {}
+	for _,tile in pairs(bot:getWorld():getTiles()) do
+		if tile.fg == pos_drop and count < 3 then
+			table.insert(ceky, tile.y)
+			count = count + 1
+		end
+	end
+	
+	local minValue = ceky[1]
+	local maxValue = ceky[1]
+	local midValue
+	
+
+	for i = 2, #ceky do
+		if ceky[i] < minValue then
+			minValue = ceky[i]
+		end
+	end
+	
+	for i = 2, #ceky do
+		if ceky[i] > maxValue then
+			maxValue = ceky[i]
+		end
+	end
+
+	for i = 1,#ceky do
+		if ceky[i] ~= minValue and ceky[i] ~= maxValue then
+			midValue = ceky[i]
+		end
+	end
+	
+	return minValue,midValue,maxValue
+end
+
+function cekx(y)
     for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == pos_drop and #bot:getPath(tile.x, tile.y) > 0 then
-            if tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id)) then
-                bot:findPath(tile.x-1, tile.y)
-                sleep(1000)
-                while bot:getInventory():findItem(id) > 0 and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id)) do
-                    bot:drop(id, bot:getInventory():findItem(id))
-                    sleep(3000)
+        if tile.fg == pos_drop and tile.y == y then
+            return tile.x
+        end
+    end
+end
+
+function drop_item(id)
+    local minim,tengah,tinggi = cek_pos()
+    local buatcek
+
+    if id == 2204 or id == 2286 then
+        buatcek = tinggi
+    elseif id == 6848 then
+        buatcek = tengah
+    elseif contains(items, id) then
+        buatcek = minim
+    end
+
+    for y = 53,0,-1 do
+        for x = 1,98 do
+            if y == buatcek and x >= cekx(buatcek) then
+                if tile_drop(x,y,id, bot:getInventory():findItem(id)) then
+                    if not bot:isInTile(x+1,y) and #bot:getPath(x+1, y) > 0 then
+                        bot:findPath(x+1,y)
+                        sleep(1000)
+                    end
+                    bot:setDirection(true)
+                    sleep(500)
+                    while bot:getInventory():findItem(id) > 0 and tile_drop(x,y,id, bot:getInventory():findItem(id)) do
+                        bot:drop(id, bot:getInventory():findItem(id))
+                        sleep(drop_delay)
+                    end
+                end
+                if bot:getInventory():findItem(id) == 0 then
+                    break
                 end
             end
         end
@@ -82,17 +143,15 @@ end
 
 function warp(world, id)
     while bot:getWorld().name:lower() ~= world:lower() do
-        bot:warp(world)
+        bot:warp(world, id)
         sleep(warp_interval)
         if bot.status ~= BotStatus.online then
             connect()
-            bot:warp(world)
+            bot:warp(world, id)
             sleep(warp_interval)
         end
     end
-    if id == nil or id == "" then
-        return
-    end
+
     if bot:isInWorld() then
         while bot:getWorld():getTile(bot.x, bot.y).fg == 6 do
             bot:warp(world, id)
@@ -173,8 +232,8 @@ function process_auto_geiger()
             done = true
             return
         end
-        warp(geiger_world)
-        sleep(200)
+        bot:warp(geiger_world)
+        sleep(7000)
         bot.auto_geiger.enabled = true
         while not bot:getInventory():getItem(2286).isActive do
             sleep(500)
@@ -189,85 +248,83 @@ function process_auto_geiger()
 end
 
 function main()
-    while true do
-        for _,player in pairs(bot_list) do
-            if player:find("|") then
-                local mac,rid = player:match("(.-)|(.+)")
-                bot = addBot(random_name(6), mac, rid)
-                sleep(500)
-                bot.auto_collect = false
-                bot.auto_reconnect = false
-                sleep(8000)
-                connect()
-            elseif player:find(":") then
-                local user, pass = player:match("([^:]+):([^:]+)")
-                bot = addBot(user, pass)
-                sleep(500)
-                bot.auto_collect = false
-                bot.auto_reconnect = false
-                sleep(8000)
-                connect()
-            end
-    
-            if bot:getInventory():getItemCount(2204) == 0 then
-                warp(alive, alive_id)
-                sleep(200)
-                take(2204)
-                sleep(200)
-                if bot:getInventory():getItemCount(2204) > 1 then
-                    bot:setDirection(false)
-                    sleep(500)
-                    bot:drop(2204, bot:getInventory():getItemCount(2204) - 1)
-                    sleep(3000)
-                end
-                while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
-                    bot:wear(2204)
-                    sleep(1500)
-                end
-            end
-    
-            if bot:getInventory():getItemCount(6848) == 0 then
-                warp(lumi, lumi_id)
-                sleep(200)
-                take(6848)
-                sleep(200)
-                while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
-                    bot:wear(6848)
-                    sleep(1500)
-                end
-            end
-    
-            while is_valid() do
-                if bot.status == BotStatus.online then
-                    sleep(2500)
-                    process_auto_geiger()
-                    if done then 
-                        done = false
-                        break 
-                    end
-                else
-                    sleep(15000)
-                    connect()
-                end
-            end
-        
-            if bot:getInventory():getItemCount(2286) > 0 then
-                warp(dead, dead_id)
-                sleep(200)
-                drop_item(2286)
-                sleep(200)
-            end
-    
-            if bot:getInventory():getItemCount(6848) > 0 then
-                warp(lumi, lumi_id)
-                sleep(200)
-                drop_item(6848)
-                sleep(200)
-            end
-    
-            sleep(1000)
-            removeBot(bot.name)
+    for _,player in pairs(bot_list) do
+        if player:find("|") then
+            local mac,rid = player:match("(.-)|(.+)")
+            bot = addBot(random_name(6), mac, rid)
+            sleep(500)
+            bot.auto_collect = false
+            bot.auto_reconnect = false
+            sleep(8000)
+            connect()
+        elseif player:find(":") then
+            local user, pass = player:match("([^:]+):([^:]+)")
+            bot = addBot(user, pass)
+            sleep(500)
+            bot.auto_collect = false
+            bot.auto_reconnect = false
+            sleep(8000)
+            connect()
         end
+
+        if bot:getInventory():getItemCount(2204) == 0 then
+            warp(storage, storage_id)
+            sleep(200)
+            take(2204)
+            sleep(200)
+            if bot:getInventory():getItemCount(2204) > 1 then
+                bot:setDirection(true)
+                sleep(500)
+                bot:drop(2204, bot:getInventory():getItemCount(2204) - 1)
+                sleep(drop_delay)
+            end
+            while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
+                bot:wear(2204)
+                sleep(1500)
+            end
+        end
+
+        if bot:getInventory():getItemCount(6848) == 0 then
+            warp(storage, storage_id)
+            sleep(200)
+            take(6848)
+            sleep(200)
+            while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
+                bot:wear(6848)
+                sleep(1500)
+            end
+        end
+
+        while is_valid() do
+            if bot.status == BotStatus.online then
+                sleep(2500)
+                process_auto_geiger()
+                if done then 
+                    done = false
+                    break
+                end
+            else
+                sleep(15000)
+                connect()
+            end
+        end
+
+        if bot:getInventory():getItemCount(2286) > 0 then
+            warp(storage, storage_id)
+            sleep(200)
+            drop_item(2286)
+            sleep(200)
+        end
+
+        if bot:getInventory():getItemCount(6848) > 0 then
+            warp(storage, storage_id)
+            sleep(200)
+            drop_item(6848)
+            sleep(200)
+        end
+
+        sleep(1000)
+        removeBot(bot.name)
     end
 end
 
@@ -277,4 +334,10 @@ if proxy ~= nil and proxy ~= "" then
     manager:addProxy(proxy)
 end
 
-main()
+if looping then
+    while true do
+        main()
+    end
+else
+    main()
+end
