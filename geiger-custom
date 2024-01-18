@@ -189,83 +189,85 @@ function process_auto_geiger()
 end
 
 function main()
-    for _,player in pairs(bot_list) do
-        if player:find("|") then
-            local mac,rid = player:match("(.-)|(.+)")
-            bot = addBot(random_name(6), mac, rid)
-            sleep(500)
-            bot.auto_collect = false
-            bot.auto_reconnect = false
-            sleep(8000)
-            connect()
-        elseif player:find(":") then
-            local user, pass = player:match("([^:]+):([^:]+)")
-            bot = addBot(user, pass)
-            sleep(500)
-            bot.auto_collect = false
-            bot.auto_reconnect = false
-            sleep(8000)
-            connect()
-        end
-
-        if bot:getInventory():getItemCount(2204) == 0 then
-            warp(alive, alive_id)
-            sleep(200)
-            take(2204)
-            sleep(200)
-            if bot:getInventory():getItemCount(2204) > 1 then
-                bot:setDirection(false)
+    while true do
+        for _,player in pairs(bot_list) do
+            if player:find("|") then
+                local mac,rid = player:match("(.-)|(.+)")
+                bot = addBot(random_name(6), mac, rid)
                 sleep(500)
-                bot:drop(2204, bot:getInventory():getItemCount(2204) - 1)
-                sleep(3000)
-            end
-            while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
-                bot:wear(2204)
-                sleep(1500)
-            end
-        end
-
-        if bot:getInventory():getItemCount(6848) == 0 then
-            warp(lumi, lumi_id)
-            sleep(200)
-            take(6848)
-            sleep(200)
-            while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
-                bot:wear(6848)
-                sleep(1500)
-            end
-        end
-
-        while is_valid() do
-            if bot.status == BotStatus.online then
-                sleep(2500)
-                process_auto_geiger()
-                if done then 
-                    done = false
-                    break 
-                end
-            else
-                sleep(15000)
+                bot.auto_collect = false
+                bot.auto_reconnect = false
+                sleep(8000)
+                connect()
+            elseif player:find(":") then
+                local user, pass = player:match("([^:]+):([^:]+)")
+                bot = addBot(user, pass)
+                sleep(500)
+                bot.auto_collect = false
+                bot.auto_reconnect = false
+                sleep(8000)
                 connect()
             end
-        end
     
-        if bot:getInventory():getItemCount(2286) > 0 then
-            warp(dead, dead_id)
-            sleep(200)
-            drop_item(2286)
-            sleep(200)
+            if bot:getInventory():getItemCount(2204) == 0 then
+                warp(alive, alive_id)
+                sleep(200)
+                take(2204)
+                sleep(200)
+                if bot:getInventory():getItemCount(2204) > 1 then
+                    bot:setDirection(false)
+                    sleep(500)
+                    bot:drop(2204, bot:getInventory():getItemCount(2204) - 1)
+                    sleep(3000)
+                end
+                while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
+                    bot:wear(2204)
+                    sleep(1500)
+                end
+            end
+    
+            if bot:getInventory():getItemCount(6848) == 0 then
+                warp(lumi, lumi_id)
+                sleep(200)
+                take(6848)
+                sleep(200)
+                while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
+                    bot:wear(6848)
+                    sleep(1500)
+                end
+            end
+    
+            while is_valid() do
+                if bot.status == BotStatus.online then
+                    sleep(2500)
+                    process_auto_geiger()
+                    if done then 
+                        done = false
+                        break 
+                    end
+                else
+                    sleep(15000)
+                    connect()
+                end
+            end
+        
+            if bot:getInventory():getItemCount(2286) > 0 then
+                warp(dead, dead_id)
+                sleep(200)
+                drop_item(2286)
+                sleep(200)
+            end
+    
+            if bot:getInventory():getItemCount(6848) > 0 then
+                warp(lumi, lumi_id)
+                sleep(200)
+                drop_item(6848)
+                sleep(200)
+            end
+    
+            sleep(1000)
+            removeBot(bot.name)
         end
-
-        if bot:getInventory():getItemCount(6848) > 0 then
-            warp(lumi, lumi_id)
-            sleep(200)
-            drop_item(6848)
-            sleep(200)
-        end
-
-        sleep(1000)
-        removeBot(bot.name)
     end
 end
 
