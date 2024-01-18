@@ -166,6 +166,7 @@ function process_buy_item()
                                 vbuy(tile.x, tile.y, tile:getExtra().item_price, item)
                                 sleep(500)
                                 if gacukup then
+                                    checkgoods()
                                     return
                                 end
                             end
