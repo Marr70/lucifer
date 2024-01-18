@@ -1,3 +1,13 @@
+--SC MOVE
+id = 102 -- Target ID For Take ItemId 
+worldTake = {"tesmoving", "tesmoving2"} -- Name World For Take Item 
+doorTake = "alamak" -- ID DOOR World Take 
+worldDestination = "tessaving" --name world for put to vend
+doorDestination = "anjay" -- ID DOOR world Destination
+warpDelay = 5000
+mode = "wtw" --wtv/wtw/vtw/vtv
+
+--DO NOT EDIT
 bot = getBot()
 stock_value = 0
 bl_vend = {}
@@ -144,7 +154,7 @@ end
 function empty()
     local currentworld = bot:getWorld().name
     for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == 2978 then
+        if tile.fg == 2978 or tile.fg == 9268 then
             if tile:getExtra().id == id then
                 ex = tile.x
                 ye = tile.y
@@ -200,7 +210,7 @@ function put()
     reconnect(worldDestination,doorDestination)
 
     for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == 2978 then
+        if tile.fg == 2978 or tile.fg == 9268 then
             if not bl_vend[tile.x..","..tile.y] then
                 if tile:getExtra().id == 0 then
                     ex = tile.x
@@ -219,7 +229,7 @@ function put()
                     ye = tile.y
                     bot:findPath(tile.x,tile.y)
                     reconnect(worldDestination,doorDestination, ex, ye)
-                    sleep(1500)
+                    sleep(1000)
                     bot:wrench(bot.x,bot.y)
                     listenEvents(2)
                     while stock_value == 0 do
@@ -251,7 +261,7 @@ end
 
 function checkvends()
     for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == 2978 then
+        if tile.fg == 2978 or tile.fg == 9268 then
             if tile:getExtra().id == id then
                 return true
             end
