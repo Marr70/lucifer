@@ -1,13 +1,3 @@
---SC MOVE
-id = 102 -- Target ID For Take ItemId 
-worldTake = {"tesmoving", "tesmoving2"} -- Name World For Take Item 
-doorTake = "alamak" -- ID DOOR World Take 
-worldDestination = "tessaving" --name world for put to vend
-doorDestination = "anjay" -- ID DOOR world Destination
-warpDelay = 5000
-mode = "wtw" --wtv/wtw/vtw/vtv
-
---DO NOT EDIT
 bot = getBot()
 stock_value = 0
 bl_vend = {}
