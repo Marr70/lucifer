@@ -13,15 +13,17 @@ function round(n)
 end
 
 function take(id)
-    for _,obj in pairs(bot:getWorld():getObjects()) do
-        if obj.id == id and #bot:getPath(round(obj.x/32) + 1, obj.y//32) > 0 then
-            bot:findPath(round(obj.x/32) + 1, obj.y//32)
-            sleep(1000)
-            bot:collectObject(obj.oid, 2)
-            sleep(take_delay)
-        end
-        if bot:getInventory():findItem(id) > 0 then
-            break
+    while bot:getInventory():findItem(id) == 0 do
+        for _,obj in pairs(bot:getWorld():getObjects()) do
+            if obj.id == id and #bot:getPath(round(obj.x/32) + 1, obj.y//32) > 0 then
+                bot:findPath(round(obj.x/32) + 1, obj.y//32)
+                sleep(1000)
+                bot:collectObject(obj.oid, 2)
+                sleep(take_delay)
+            end
+            if bot:getInventory():findItem(id) > 0 then
+                break
+            end
         end
     end
 end
