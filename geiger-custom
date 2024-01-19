@@ -1,4 +1,3 @@
-
 storage, storage_id = storage_world:match("([^:]+):([^:]+)")
 done = false
 items = {6416, 3196, 1500, 1498, 2806, 2804, 8270, 8272, 8274, 4676, 4678, 4680, 4682, 4652, 4650, 4648, 4646, 11186,10086, 10084,2206, 2244, 2246, 2242, 2248, 2250, 3792, 3306, 4654, 3204}
@@ -24,8 +23,11 @@ function take(id)
             if obj.id == id and #bot:getPath(round(obj.x/32) - 1, obj.y//32) > 0 then
                 bot:findPath(round(obj.x/32) - 1, obj.y//32)
                 sleep(1000)
-                bot:collectObject(obj.oid, 2)
-                sleep(take_delay)
+                bot.auto_collect = true
+                while bot:getInventory():findItem(id) == 0 do
+                    sleep(take_delay)
+                end
+                bot.auto_collect = false
                 break
             end
         end
@@ -300,6 +302,8 @@ function main()
             sleep(500)
             bot.auto_collect = false
             bot.auto_reconnect = false
+            bot.collect_range = 1
+            bot.collect_interval = 500
             sleep(8000)
             connect()
         elseif player:find(":") then
@@ -308,6 +312,8 @@ function main()
             sleep(500)
             bot.auto_collect = false
             bot.auto_reconnect = false
+            bot.collect_range = 1
+            bot.collect_interval = 500
             sleep(8000)
             connect()
         end
