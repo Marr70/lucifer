@@ -213,8 +213,9 @@ function connect()
         bot:connect()
         sleep(20000)
         if not is_valid() then
-            sleep(400)
-            return
+            while true do
+                sleep(3000)
+            end
         end
     end
 end
