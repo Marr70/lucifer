@@ -17,17 +17,27 @@ function round(n)
     return n % 1 > 0.5 and math.ceil(n) or math.floor(n)
 end
 
+function isInRadius(x, y, range)
+    return bot.x <= (x+range) and bot.y <= (y+range)
+end
+
+function collect(range, id)
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if id ~= nil and id ~= 0 and obj.id == id then
+            if isInRadius(round(obj.x/32), obj.y//32, range) then
+                bot:collectObject(obj.oid, range)
+            end
+        end
+    end
+end
+
 function take(id)
     while bot:getInventory():findItem(id) == 0 do
         for _,obj in pairs(bot:getWorld():getObjects()) do
-            if obj.id == id and #bot:getPath(round(obj.x/32) - 1, obj.y//32) > 0 then
-                bot:findPath(round(obj.x/32) - 1, obj.y//32)
+            if obj.id == id and #bot:getPath(round(obj.x/32), obj.y//32) > 0 then
+                bot:findPath(round(obj.x/32), obj.y//32)
                 sleep(1000)
-                bot.auto_collect = true
-                while bot:getInventory():findItem(id) == 0 do
-                    sleep(take_delay)
-                end
-                bot.auto_collect = false
+                collect(2, obj.id)
                 break
             end
         end
@@ -111,7 +121,8 @@ function cekx(y)
     end
 end
 
-function drop_item(id)
+function drop_item(id, count)
+    count = count or bot:getInventory():findItem(id)
     local minim,tengah,tinggi = cek_pos()
     local buatcek
 
@@ -126,24 +137,24 @@ function drop_item(id)
     for y = 53,0,-1 do
         for x = 1,98 do
             if y == buatcek and x >= cekx(buatcek) then
-                if tile_drop(x,y,id, bot:getInventory():findItem(id)) then
+                if tile_drop(x,y,id, count) then
                     if not bot:isInTile(x-1,y) and #bot:getPath(x-1, y) > 0 then
                         bot:findPath(x-1,y)
                         sleep(1000)
                     end
                     bot:setDirection(false)
                     sleep(500)
-                    while bot:getInventory():findItem(id) > 0 and tile_drop(x,y,id, bot:getInventory():findItem(id)) do
-                        bot:drop(id, bot:getInventory():findItem(id))
+                    while bot:getInventory():findItem(id) > 0 and tile_drop(x,y,id, count) do
+                        bot:drop(id, count)
                         sleep(drop_delay)
                     end
                 end
-                if bot:getInventory():findItem(id) == 0 then
+                if bot:getInventory():findItem(id) <= 1 then
                     break
                 end
             end
         end
-        if bot:getInventory():findItem(id) == 0 then
+        if bot:getInventory():findItem(id) <= 1 then
             break
         end
     end
@@ -302,8 +313,6 @@ function main()
             sleep(500)
             bot.auto_collect = false
             bot.auto_reconnect = false
-            bot.collect_range = 1
-            bot.collect_interval = 500
             sleep(8000)
             connect()
         elseif player:find(":") then
@@ -312,8 +321,6 @@ function main()
             sleep(500)
             bot.auto_collect = false
             bot.auto_reconnect = false
-            bot.collect_range = 1
-            bot.collect_interval = 500
             sleep(8000)
             connect()
         end
@@ -330,10 +337,8 @@ function main()
             take(2204)
             sleep(200)
             if bot:getInventory():getItemCount(2204) > 1 then
-                bot:setDirection(false)
+                drop_item(2204, bot:getInventory():getItemCount(2204) - 1)
                 sleep(500)
-                bot:drop(2204, bot:getInventory():getItemCount(2204) - 1)
-                sleep(drop_delay)
             end
             while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
                 bot:wear(2204)
@@ -347,10 +352,8 @@ function main()
             take(6848)
             sleep(200)
             if bot:getInventory():getItemCount(6848) > 1 then
-                bot:setDirection(false)
+                drop_item(6848, bot:getInventory():getItemCount(6848) - 1)
                 sleep(500)
-                bot:drop(6848, bot:getInventory():getItemCount(6848) - 1)
-                sleep(drop_delay)
             end
             while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
                 bot:wear(6848)
