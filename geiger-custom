@@ -289,6 +289,12 @@ function main()
             sleep(200)
             take(6848)
             sleep(200)
+            if bot:getInventory():getItemCount(6848) > 1 then
+                bot:setDirection(true)
+                sleep(500)
+                bot:drop(6848, bot:getInventory():getItemCount(6848) - 1)
+                sleep(drop_delay)
+            end
             while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
                 bot:wear(6848)
                 sleep(1500)
