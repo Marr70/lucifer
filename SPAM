@@ -126,7 +126,13 @@ function main()
             else
                 for _,tile in pairs(getTiles()) do
                     if tile.fg == 762 and #bot:getPath(tile.x, tile.y) > 0 then
-                        local pass = tile:getExtra().label:match(":(.+)"):gsub("%s", "")
+			local str = tile:getExtra().label:lower()
+			local pass = "tes"
+			if str:find("world name") then
+				pass = world_spam:upper()
+			elseif str:find(":") then
+				pass = tile:getExtra().label:match(":(.+)"):gsub("%s", "")
+			end
                         bot:findPath(tile.x, tile.y)
                         sleep(2000)
                         bot:enter(pass)
