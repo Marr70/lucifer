@@ -256,7 +256,7 @@ function process_auto_geiger()
         bot.auto_geiger.enabled = false
         warp(storage, storage_id)
         sleep(200)
-        drop_item(item)
+        drop_item(item, bot:getInventory():findItem(item))
     else
         if bot:getInventory():getItem(2286).isActive then
             done = true
