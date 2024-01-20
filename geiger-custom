@@ -120,7 +120,8 @@ function cekx(y)
     end
 end
 
-function drop_item(id, count)
+function drop_item(id, sisa)
+    local sisa = sisa or 0
     local minim,tengah,tinggi = cek_pos()
     local buatcek
 
@@ -135,22 +136,24 @@ function drop_item(id, count)
     for y = 53,0,-1 do
         for x = 1,98 do
             if y == buatcek and x >= cekx(buatcek) then
-                if tile_drop(x,y,id, count) then
+                if tile_drop(x,y,id, bot:getInventory():findItem(id) - sisa) then
                     if not bot:isInTile(x-1,y) and #bot:getPath(x-1, y) > 0 then
                         bot:findPath(x-1,y)
                         sleep(1000)
                     end
                     bot:setDirection(false)
                     sleep(500)
-                    bot:drop(id, count)
-                    sleep(drop_delay)
+                    while bot:getInventory():findItem(id) > sisa and tile_drop(x,y,id, bot:getInventory():findItem(id) - sisa) do
+                        bot:drop(id, bot:getInventory():findItem(id)-sisa)
+                        sleep(drop_delay)
+                    end
                 end
-                if bot:getInventory():findItem(id) <= 1 then
+                if bot:getInventory():findItem(id) == sisa then
                     break
                 end
             end
         end
-        if bot:getInventory():findItem(id) <= 1 then
+        if bot:getInventory():findItem(id) == sisa then
             break
         end
     end
@@ -256,7 +259,7 @@ function process_auto_geiger()
         bot.auto_geiger.enabled = false
         warp(storage, storage_id)
         sleep(200)
-        drop_item(item, bot:getInventory():findItem(item))
+        drop_item(item)
     else
         if bot:getInventory():getItem(2286).isActive then
             done = true
@@ -333,7 +336,7 @@ function main()
             take(2204)
             sleep(200)
             if bot:getInventory():getItemCount(2204) > 1 then
-                drop_item(2204, bot:getInventory():getItemCount(2204) - 1)
+                drop_item(2204, 1)
                 sleep(500)
             end
             while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
@@ -348,7 +351,7 @@ function main()
             take(6848)
             sleep(200)
             if bot:getInventory():getItemCount(6848) > 1 then
-                drop_item(6848, bot:getInventory():getItemCount(6848) - 1)
+                drop_item(6848, 1)
                 sleep(500)
             end
             while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
@@ -374,14 +377,14 @@ function main()
         if bot:getInventory():getItemCount(2286) > 0 then
             warp(storage, storage_id)
             sleep(200)
-            drop_item(2286, bot:getInventory():findItem(2286))
+            drop_item(2286)
             sleep(200)
         end
 
         if bot:getInventory():getItemCount(6848) > 0 then
             warp(storage, storage_id)
             sleep(200)
-            drop_item(6848, bot:getInventory():findItem(6848))
+            drop_item(6848)
             sleep(200)
         end
 
