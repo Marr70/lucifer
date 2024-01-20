@@ -375,14 +375,14 @@ function main()
         if bot:getInventory():getItemCount(2286) > 0 then
             warp(storage, storage_id)
             sleep(200)
-            drop_item(2286)
+            drop_item(2286, bot:getInventory():findItem(2286))
             sleep(200)
         end
 
         if bot:getInventory():getItemCount(6848) > 0 then
             warp(storage, storage_id)
             sleep(200)
-            drop_item(6848)
+            drop_item(6848, bot:getInventory():findItem(6848))
             sleep(200)
         end
 
