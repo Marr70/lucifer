@@ -121,7 +121,6 @@ function cekx(y)
 end
 
 function drop_item(id, count)
-    count = count or bot:getInventory():findItem(id)
     local minim,tengah,tinggi = cek_pos()
     local buatcek
 
