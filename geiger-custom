@@ -144,7 +144,7 @@ function drop_item(id, count)
                     end
                     bot:setDirection(false)
                     sleep(500)
-                    while bot:getInventory():findItem(id) > 0 and tile_drop(x,y,id, count) do
+                    while bot:getInventory():findItem(id) > 1 and tile_drop(x,y,id, count) do
                         bot:drop(id, count)
                         sleep(drop_delay)
                     end
