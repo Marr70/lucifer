@@ -73,31 +73,31 @@ end
 
 function spam()
 	for _,text in pairs(spam_text) do
-        bot:say(text)
-		    listenEvents(delay_spam/1000)
-        emote()
+	        bot:say(text)
+		listenEvents(delay_spam/1000)
+        	emote()
 
-        if not bot:isInWorld() then
-            return
-        end
-        if autoleave_on_owner then
-            for _,player in pairs(bot:getWorld():getPlayers()) do
-                if player.name == owner then
-                    local wurld = randomName(9)
-                    sleep(100)
-                    bot:warp(wurld)
-                    sleep(7000)
-                    print("Owner detected, will go to randomworld for 1 minute")
-                    sleep(53000)
-                    return
-                end
-            end
-        end
-        if detect then
-            print("Spam detected, will wait for "..(delay_detect/1000).." seconds")
-            sleep(delay_detect)
-            detect = false
-        end
+	        if not bot:isInWorld() then
+	            return
+	        end
+	        if autoleave_on_owner then
+	            for _,player in pairs(bot:getWorld():getPlayers()) do
+	                if player.name == owner then
+	                    local wurld = randomName(9)
+	                    sleep(100)
+	                    bot:warp(wurld)
+	                    sleep(7000)
+	                    print("Owner detected, will go to randomworld for 1 minute")
+	                    sleep(53000)
+	                    return
+	                end
+	            end
+	        end
+	        if detect then
+	            print("Spam detected, will wait for "..(delay_detect/1000).." seconds")
+	            sleep(delay_detect)
+	            detect = false
+	        end
 	end
 end
 
