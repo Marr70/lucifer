@@ -334,62 +334,77 @@ function main()
             sleep(500)
         end
 
-        if bot:getInventory():getItemCount(2204) == 0 then
+        if not bot:isInWorld() then
             warp(storage, storage_id)
             sleep(200)
-            take(2204)
-            sleep(200)
-            if bot:getInventory():getItemCount(2204) > 1 then
-                drop_item(2204, 1)
-                sleep(500)
-            end
-            while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
-                bot:wear(2204)
-                sleep(1500)
+        end
+
+        local playermod
+
+        for _,player in pairs(bot:getWorld():getPlayers()) do
+            if player.name:upper():find(string.format("%s_", bot.name:upper())) then
+                playermod = player.avatarFlags
             end
         end
 
-        if bot:getInventory():getItemCount(6848) == 0 then
-            warp(storage, storage_id)
-            sleep(200)
-            take(6848)
-            sleep(200)
-            if bot:getInventory():getItemCount(6848) > 1 then
-                drop_item(6848, 1)
-                sleep(500)
-            end
-            while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
-                bot:wear(6848)
-                sleep(1500)
-            end
-        end
-
-        while is_valid() do
-            if bot.status == BotStatus.online then
-                sleep(2500)
-                process_auto_geiger()
-                if done then 
-                    done = false
-                    break
+        if playermod ~= 524288 then
+            if bot:getInventory():getItemCount(2204) == 0 then
+                warp(storage, storage_id)
+                sleep(200)
+                take(2204)
+                sleep(200)
+                if bot:getInventory():getItemCount(2204) > 1 then
+                    drop_item(2204, 1)
+                    sleep(500)
                 end
-            else
-                sleep(15000)
-                connect()
+                while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
+                    bot:wear(2204)
+                    sleep(1500)
+                end
             end
-        end
 
-        if bot:getInventory():getItemCount(2286) > 0 then
-            warp(storage, storage_id)
-            sleep(200)
-            drop_item(2286)
-            sleep(200)
-        end
+            if bot:getInventory():getItemCount(6848) == 0 then
+                warp(storage, storage_id)
+                sleep(200)
+                take(6848)
+                sleep(200)
+                if bot:getInventory():getItemCount(6848) > 1 then
+                    drop_item(6848, 1)
+                    sleep(500)
+                end
+                while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
+                    bot:wear(6848)
+                    sleep(1500)
+                end
+            end
 
-        if bot:getInventory():getItemCount(6848) > 0 then
-            warp(storage, storage_id)
-            sleep(200)
-            drop_item(6848)
-            sleep(200)
+            while is_valid() do
+                if bot.status == BotStatus.online then
+                    sleep(2500)
+                    process_auto_geiger()
+                    if done then 
+                        done = false
+                        break
+                    end
+                else
+                    sleep(15000)
+                    connect()
+                end
+            end
+
+            if bot:getInventory():getItemCount(2286) > 0 then
+                warp(storage, storage_id)
+                sleep(200)
+                drop_item(2286)
+                sleep(200)
+            end
+
+            if bot:getInventory():getItemCount(6848) > 0 then
+                warp(storage, storage_id)
+                sleep(200)
+                drop_item(6848)
+                sleep(200)
+            end
         end
 
         sleep(1000)
