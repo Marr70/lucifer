@@ -115,7 +115,7 @@ end
 function cekx(y, id)
     for _,tile in pairs(bot:getWorld():getTiles()) do
         if tile.fg == pos_drop and tile.y == y then
-            if id == 2204 then
+            if id == 2204 or id == 6848 then
                 return (tile.x + math.random(0,2))
             else
                 return tile.x
