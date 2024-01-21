@@ -112,10 +112,14 @@ function cek_pos()
 	return minValue,midValue,maxValue
 end
 
-function cekx(y)
+function cekx(y, id)
     for _,tile in pairs(bot:getWorld():getTiles()) do
         if tile.fg == pos_drop and tile.y == y then
-            return tile.x
+            if id == 2204 then
+                return (tile.x + math.random(0,2))
+            else
+                return tile.x
+            end
         end
     end
 end
@@ -135,7 +139,7 @@ function drop_item(id, sisa)
 
     for y = 53,0,-1 do
         for x = 1,98 do
-            if y == buatcek and x >= cekx(buatcek) then
+            if y == buatcek and x >= cekx(buatcek, id) then
                 if tile_drop(x,y,id, bot:getInventory():findItem(id) - sisa) then
                     if not bot:isInTile(x-1,y) and #bot:getPath(x-1, y) > 0 then
                         bot:findPath(x-1,y)
