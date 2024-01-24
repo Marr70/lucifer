@@ -505,9 +505,9 @@ function main_leveling()
 end
 
 if leveling_mode.enabled then
-    bot = getBot()
     main_leveling()
 else
+    bot = getBot()
     bot.auto_collect = false
     while true do
         main_normal()
