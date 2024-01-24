@@ -1,0 +1,515 @@
+--egg benedict flags 32768
+
+bot_list = {}
+goods = {3472, 4602, 4588, 962}
+locks = {242,9640,202,204,206,1796,4994,7188,408,2950,4428, 4802 ,5814,5260,5980,8470,10410,11550,11586}
+leveling_items = {11638, 7752, 1474}
+
+strg, strg_id = storage:match("([^:]+)|([^:]+)")
+world_oven, door_oven = oven:match("([^:]+)|([^:]+)")
+
+
+if leveling_mode.enabled then
+    if leveling_mode.use_hat then
+        table.insert(goods, 11638)
+    end
+    if leveling_mode.use_hand then
+        table.insert(goods, 7752)
+    end
+    if leveling_mode.use_food_buff then
+        table.insert(goods, 1474)
+    end
+
+    for line in leveling_mode.account_list:gmatch("[^\n]+") do
+        line = line:gsub("%s", "")
+        table.insert(bot_list, line)
+    end
+end
+
+recipes = {}
+
+if mode:lower() == "arroz" then
+    recipes[1] = {id = 3472, time = 0}
+    recipes[2] = {id = {4602,4588}, time = 33.7}
+    recipes[3] = {id = 962, time = 70}
+    recipes[4] = {id = 18, time = 100}
+end
+
+function create_matrix(number)
+    local matrix = {}
+    local centerx = (math.sqrt(number) + 1) / 2
+    local centery = (math.sqrt(number) + 1) / 2
+    for i = 1, math.sqrt(number) do
+        matrix[i] = {}
+        for j = 1,math.sqrt(number) do
+            matrix[i][j] = {i - centerx,j - centery}
+        end
+    end
+    return matrix
+end
+
+function check_oven(number)
+    local oven_space = create_matrix(number)
+    local sekip = false
+    local count = 0
+    for _,tile in pairs(bot:getWorld():getTiles()) do
+        for i = 1, math.sqrt(number) do
+            for j = 1, math.sqrt(number) do
+                local coord = oven_space[i][j]
+                if bot:getWorld():getTile(tile.x + coord[2], tile.y + coord[1]).fg ~= 4618 then
+                    sekip = true
+                    break
+                end
+                if bot:getWorld():getTile(tile.x + coord[2], tile.y + coord[1]).fg == 4618 then
+                    count = count + 1
+                end
+            end
+            if sekip then
+                sekip = false
+                break
+            end
+        end
+        if count >= number then
+            bot:findPath(tile.x, tile.y)
+            sleep(1000)
+            if debugging then
+                print(string.format("%i,%i is the center", tile.x , tile.y))
+            end
+            break
+        end
+    end
+end
+
+function send_cook(x, y, id)
+    bot:place(x,y, id)
+    if (500 + bot:getPing()) > 600 then
+        sleep(600)
+    else
+        sleep(500 + bot:getPing())
+    end
+    bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
+    if (500 + bot:getPing()) > 600 then
+        sleep(600)
+    else
+        sleep(500 + bot:getPing())
+    end
+end
+
+function cook(number)
+    local oven_space = create_matrix(number)
+    local oven_table = {}
+    local elapsed_time = {}
+
+    for i = 1, math.sqrt(number) do
+        for j = 1, math.sqrt(number) do
+            local coord = oven_space[i][j]
+            table.insert(oven_table, {x = coord[2], y = coord[1]})
+        end
+    end
+
+    for index,bahan in pairs(recipes) do
+        if index == 1 then
+            for nomoroven,data in ipairs(oven_table) do
+                send_cook(bot.x+data.x, bot.y+data.y, recipes[index].id)
+                elapsed_time[nomoroven] = os.time()
+            end
+        else
+            for nomoroven,data in ipairs(oven_table) do
+                if (os.time()-elapsed_time[nomoroven]) < recipes[index].time then
+                    while (os.time()-elapsed_time[nomoroven]) < recipes[index].time do
+                        sleep(50)
+                    end
+                end
+                if type(bahan.id) == "table" then
+                    for _,item in pairs(bahan.id) do
+                        bot:place(bot.x+data.x, bot.y+data.y, item)
+                        if debugging then
+                            print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
+                        end
+                        sleep(200 + bot:getPing())
+                    end
+                    sleep(200 + bot:getPing())
+                elseif bahan.id == 18 then
+                    bot:hit(bot.x+data.x, bot.y+data.y)
+                    if debugging then
+                        print(string.format("punch at %i second (oven number %i)", (os.time()-elapsed_time[nomoroven]), nomoroven))
+                    end
+                    sleep(400 + bot:getPing())
+                else
+                    bot:place(bot.x+data.x, bot.y+data.y, bahan.id)
+                    if debugging then
+                        print(string.format("put %s at %i second (oven number %i)", getInfo(bahan.id).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
+                    end
+                    sleep(400 + bot:getPing())
+                end
+            end
+        end
+    end
+end
+
+function warp(to, id)
+    while bot:getWorld().name:upper() ~= to:upper() do
+        if id and id ~= "" then
+            bot:warp(to, id)
+        else
+            bot:warp(to)
+        end
+        sleep(7000)
+    end
+    if id == "" or id == nil then
+        return
+    end
+    while bot:getWorld():getTile(bot.x, bot.y).fg == 6 do
+        bot:warp(to, id)
+        sleep(7000)
+    end
+end
+
+function round(n)
+    return n % 1 > 0.5 and math.ceil(n) or math.floor(n)
+end
+
+function isInRadius(x, y, range)
+    return bot.x <= (x+range) and bot.y <= (y+range)
+end
+
+function collect(range, id)
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if id ~= nil and id ~= 0 and obj.id == id then
+            if isInRadius(round(obj.x/32), obj.y//32, range) then
+                bot:collectObject(obj.oid, range)
+            end
+        end
+    end
+end
+
+function take(id)
+    if contains(leveling_items, id) then
+        while bot:getInventory():findItem(id) == 0 do
+            for _,obj in pairs(bot:getWorld():getObjects()) do
+                if obj.id == id then
+                    if not bot:isInTile(round(obj.x/32)-1, obj.y//32) and #bot:getPath(round(obj.x/32)-1, obj.y//32) > 0 then
+                        bot:findPath(round(obj.x/32)-1, obj.y//32)
+                        sleep(1000)
+                    end
+                    collect(2, obj.id)
+                    sleep(1000)
+                end
+            end
+        end
+    else
+        while bot:getInventory():findItem(id) < limit_take_item do
+            for _,obj in pairs(bot:getWorld():getObjects()) do
+                if obj.id == id then
+                    if not bot:isInTile(round(obj.x/32)-1, obj.y//32) and #bot:getPath(round(obj.x/32)-1, obj.y//32) > 0 then
+                        bot:findPath(round(obj.x/32)-1, obj.y//32)
+                        sleep(1000)
+                    end
+                    collect(2, obj.id)
+                    sleep(1000)
+                end
+            end
+        end
+    end
+end
+
+function tile_drop(x,y,ids,value)
+    local stack = 0
+    local count = 0
+    local store = {}
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if obj.x//32 == x and obj.y//32 == y then
+            stack = stack + 1
+            count = count + obj.count
+            if store[obj.id] then
+                store[obj.id] = store[obj.id] + obj.count
+            else
+                store[obj.id] = obj.count
+            end
+        end
+    end
+
+    if count <= (4000-value) then
+        if stack < 19 then
+            return true
+        end
+        for objId, itm in pairs(store) do
+            if objId == ids then
+                if math.ceil(itm%200) ~= 0 and math.ceil(itm%200) <= (200-value) then
+                    return true
+                else
+                    return false
+                end
+            end
+        end
+    end
+    return false
+end
+
+function drop(id, sisa)
+    if id == 4604 then
+        for _,tile in pairs(bot:getWorld():getTiles()) do
+            if tile.fg == pos_arroz then
+                if tile_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
+                    if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
+                        bot:findPath(tile.x-1, tile.y)
+                        sleep(1000)
+                    end
+                    bot:setDirection(false)
+                    sleep(500)
+                    while bot:getInventory():findItem(id) > sisa and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
+                        bot:drop(id, bot:getInventory():findItem(id)-sisa)
+                        sleep(3000)
+                    end
+                end
+                if bot:getInventory():findItem(id) == sisa then
+                    break
+                end
+            end
+        end
+    else
+        for _,tile in pairs(bot:getWorld():getTiles()) do
+            if tile.fg == pos_drop then
+                if tile_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
+                    if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
+                        bot:findPath(tile.x-1, tile.y)
+                        sleep(1000)
+                    end
+                    bot:setDirection(false)
+                    sleep(500)
+                    while bot:getInventory():findItem(id) > sisa and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
+                        bot:drop(id, bot:getInventory():findItem(id)-sisa)
+                        sleep(3000)
+                    end
+                end
+                if bot:getInventory():findItem(id) == sisa then
+                    break
+                end
+            end
+        end
+    end
+end
+
+function random_name(length)
+    while true do
+        jelek = false
+        local bad_name = {'fuc','fck','uck','vck','fuk','fug','fag','bob','dick','dck','b0b','sex','s3x','gay','g4y','bitch','dick','d1ck'}
+        local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        local name = ""
+        for i = 1, length do
+            local index = math.random(#letters)
+            name = name .. string.sub(letters, index, index)
+        end
+        for _,bn in pairs(bad_name) do
+            if name:upper():find(bn:upper()) then
+                jelek = true
+            end
+        end
+        if not jelek then 
+            return name
+        end
+    end
+end
+
+function sekip()
+    while bot:getInventory():findItem(9640) > 0 do
+        locked = false
+        sleep(1000)
+        local wurld = random_name(10)
+        bot:warp(wurld)
+        sleep(7000)
+        for _,tile in pairs(bot:getWorld():getTiles()) do
+            for _,i in pairs(locks) do
+                if tile.fg == i then
+                    sleep(200)
+                    locked = true
+                    break
+                end
+            end
+            if locked then break end
+        end
+        if not locked then 
+            bot:place(bot.x,bot.y-1,9640)
+            sleep(1000)
+        end
+    end
+end
+
+function contains(table, value)
+    for i, element in pairs(table) do
+        if element == value then
+            return true
+        end
+    end
+    return false
+end
+
+function is_valid()
+    local valid_status_list = {BotStatus.offline, BotStatus.online, BotStatus.version_update, BotStatus.server_overload, BotStatus.server_busy, BotStatus.too_many_login, BotStatus.error_connecting, BotStatus.logon_fail, BotStatus.changing_subserver, BotStatus.high_load}
+    return contains(valid_status_list, bot.status)
+end
+
+function connect()
+    while bot.status ~= BotStatus.online do
+        bot:connect()
+        sleep(15000)
+        if not is_valid() then
+            while not is_valid() do
+                sleep(3000)
+            end
+        end
+    end
+end
+
+function main_normal()
+    if bot:getInventory():findItem(4604) >= limit_drop_item then
+        warp(strg, strg_id)
+        sleep(200)
+        drop(4604, 0)
+        sleep(200)
+    end
+    for _,item in pairs(goods) do
+        if bot:getInventory():findItem(item) < limit_take_item then
+            warp(strg, strg_id)
+            sleep(200)
+            take(item)
+            if bot:getInventory():getItemCount(item) > limit_take_item then
+                drop(item, limit_take_item)
+                sleep(200)
+            end
+        end
+    end
+    if not bot:isInWorld(world_oven) then
+        warp(world_oven, door_oven)
+        sleep(200)
+    end
+    check_oven(oven_amount)
+    sleep(1000)
+    cook(oven_amount)
+    sleep(2000)
+end
+
+function main_leveling()
+    for _,player in pairs(bot_list) do
+        if player:find("|") then
+            local mac,rid = player:match("(.-)|(.+)")
+            bot = addBot(random_name(6), mac, rid)
+            sleep(500)
+            bot:connect()
+            bot.auto_collect = false
+            bot.auto_reconnect = false
+            sleep(8000)
+            connect()
+        elseif player:find(":") then
+            local user, pass = player:match("([^:]+):([^:]+)")
+            bot = addBot(user, pass)
+            sleep(500)
+            bot:connect()
+            bot.auto_collect = false
+            bot.auto_reconnect = false
+            sleep(8000)
+            connect()
+        end
+
+        if bot:getInventory():findItem(9640) > 0 then
+            bot.auto_tutorial = false
+            sekip()
+            sleep(500)
+        end
+
+        while bot.level < leveling_mode.level_limit do
+            if bot:getInventory():findItem(4604) > 0 then
+                warp(strg, strg_id)
+                sleep(200)
+                drop(4604, 0)
+                sleep(200)
+            end
+            for _,item in pairs(goods) do
+                if contains(leveling_items, item) then
+                    if bot:getInventory():findItem(item) == 0 then
+                        warp(strg, strg_id)
+                        sleep(200)
+                        take(item)
+                        if bot:getInventory():getItemCount(item) > 1 then
+                            drop(item, 1)
+                            sleep(500)
+                        end
+                        if item == 1474 then
+                            local playermod
+                            for _,player in pairs(bot:getWorld():getPlayers()) do
+                                if player.name:upper():find(string.format("%s", bot.name:upper())) then
+                                    playermod = player.avatarFlags
+                                end
+                            end
+                            if playermod ~= 32768 then
+                                bot:use(1474)
+                                sleep(1000)
+                            end
+                        else
+                            while not bot:getInventory():getItem(item).isActive and bot:getInventory():getItemCount(item) >= 1 do
+                                bot:wear(item)
+                                sleep(1500)
+                            end
+                        end
+                    end
+                else
+                    if bot:getInventory():findItem(item) < limit_take_item then
+                        warp(strg, strg_id)
+                        sleep(200)
+                        take(item)
+                        if bot:getInventory():getItemCount(item) > limit_take_item then
+                            drop(item, limit_take_item)
+                            sleep(500)
+                        end
+                    end
+                end
+            end
+            if not bot:isInWorld(world_oven) then
+                warp(world_oven, door_oven)
+                sleep(200)
+            end
+            check_oven(oven_amount)
+            sleep(1000)
+            cook(oven_amount)
+            sleep(2000)
+        end
+
+        if bot:getInventory():findItem(4604) > 0 then
+            warp(strg, strg_id)
+            sleep(200)
+            drop(4604, 0)
+            sleep(200)
+        end
+        if bot:getInventory():findItem(11638) > 0 then
+            warp(strg, strg_id)
+            sleep(200)
+            drop(11638, 0)
+            sleep(200)
+        end
+        if bot:getInventory():findItem(7752) > 0 then
+            warp(strg, strg_id)
+            sleep(200)
+            drop(7752, 0)
+            sleep(200)
+        end
+        if bot:getInventory():findItem(1474) > 0 then
+            warp(strg, strg_id)
+            sleep(200)
+            drop(1474, 0)
+            sleep(200)
+        end
+
+        sleep(1000)
+        removeBot(bot.name)
+    end
+end
+
+if leveling_mode.enabled then
+    bot = getBot()
+    main_leveling()
+else
+    bot.auto_collect = false
+    while true do
+        main_normal()
+    end
+end
