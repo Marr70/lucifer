@@ -3,17 +3,19 @@ bot_list = {}
 goods = {}
 locks = {242,9640,202,204,206,1796,4994,7188,408,2950,4428, 4802 ,5814,5260,5980,8470,10410,11550,11586}
 leveling_items = {11638, 7752, 1474}
-
+cooked = 0
 strg, strg_id = storage:match("([^:]+)|([^:]+)")
 world_oven, door_oven = oven:match("([^:]+)|([^:]+)")
 
 recipes = {}
 if mode:lower() == "arroz" then
+    cooked = 4604
     recipes[1] = {id = 3472, time = 0}
     recipes[2] = {id = {4602,4588}, time = 33.7}
     recipes[3] = {id = 962, time = 70}
     recipes[4] = {id = 18, time = 100}
 elseif mode:lower() == "berry" then
+    cooked = 4596
     recipes[1] = {id = {4562, 874}, time = 0}
     recipes[2] = {id = 868, time = 26.7}
     recipes[3] = {id = 196, time = 40}
@@ -33,7 +35,6 @@ for _,rcp in pairs(recipes) do
         end
     end
 end
-
 
 if leveling_mode.enabled then
     if leveling_mode.use_hat then
@@ -226,8 +227,8 @@ function take(id)
         while bot:getInventory():findItem(id) == 0 do
             for _,obj in pairs(bot:getWorld():getObjects()) do
                 if obj.id == id then
-                    if not bot:isInTile(round(obj.x/32)-1, obj.y//32) and #bot:getPath(round(obj.x/32)-1, obj.y//32) > 0 then
-                        bot:findPath(round(obj.x/32)-1, obj.y//32)
+                    if not bot:isInTile(round(obj.x/32), obj.y//32) and #bot:getPath(round(obj.x/32), obj.y//32) > 0 then
+                        bot:findPath(round(obj.x/32), obj.y//32)
                         sleep(1000)
                     end
                     collect(2, obj.id)
@@ -285,7 +286,7 @@ function tile_drop(x,y,ids,value)
 end
 
 function drop(id, sisa)
-    if id == 4604 then
+    if id == cooked then
         for _,tile in pairs(bot:getWorld():getTiles()) do
             if tile.fg == pos_arroz then
                 if tile_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
@@ -308,20 +309,22 @@ function drop(id, sisa)
     else
         for _,tile in pairs(bot:getWorld():getTiles()) do
             if tile.fg == pos_drop then
-                if tile_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
-                    if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
-                        bot:findPath(tile.x-1, tile.y)
-                        sleep(1000)
+                if tile.x ~= bot.x then
+                    if tile_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
+                        if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
+                            bot:findPath(tile.x-1, tile.y)
+                            sleep(1000)
+                        end
+                        bot:setDirection(false)
+                        sleep(500)
+                        while bot:getInventory():findItem(id) > sisa and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
+                            bot:drop(id, bot:getInventory():findItem(id)-sisa)
+                            sleep(3000)
+                        end
                     end
-                    bot:setDirection(false)
-                    sleep(500)
-                    while bot:getInventory():findItem(id) > sisa and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
-                        bot:drop(id, bot:getInventory():findItem(id)-sisa)
-                        sleep(3000)
+                    if bot:getInventory():findItem(id) == sisa then
+                        break
                     end
-                end
-                if bot:getInventory():findItem(id) == sisa then
-                    break
                 end
             end
         end
@@ -400,10 +403,10 @@ function connect()
 end
 
 function main_normal()
-    if bot:getInventory():findItem(4604) >= limit_drop_item then
+    if bot:getInventory():findItem(cooked) >= limit_drop_item then
         warp(strg, strg_id)
         sleep(200)
-        drop(4604, 0)
+        drop(cooked, 0)
         sleep(200)
     end
     for _,item in pairs(goods) do
@@ -456,10 +459,10 @@ function main_leveling()
         end
 
         while bot.level < leveling_mode.level_limit do
-            if bot:getInventory():findItem(4604) > 0 then
+            if bot:getInventory():findItem(cooked) > 0 then
                 warp(strg, strg_id)
                 sleep(200)
-                drop(4604, 0)
+                drop(cooked, 0)
                 sleep(200)
             end
             for _,item in pairs(goods) do
@@ -512,10 +515,10 @@ function main_leveling()
             sleep(2000)
         end
 
-        if bot:getInventory():findItem(4604) > 0 then
+        if bot:getInventory():findItem(cooked) > 0 then
             warp(strg, strg_id)
             sleep(200)
-            drop(4604, 0)
+            drop(cooked, 0)
             sleep(200)
         end
         if bot:getInventory():findItem(11638) > 0 then
