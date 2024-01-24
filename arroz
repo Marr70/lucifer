@@ -240,8 +240,8 @@ function take(id)
         while bot:getInventory():findItem(id) < limit_take_item do
             for _,obj in pairs(bot:getWorld():getObjects()) do
                 if obj.id == id then
-                    if not bot:isInTile(round(obj.x/32)-1, obj.y//32) and #bot:getPath(round(obj.x/32)-1, obj.y//32) > 0 then
-                        bot:findPath(round(obj.x/32)-1, obj.y//32)
+                    if not bot:isInTile(round(obj.x/32), obj.y//32) and #bot:getPath(round(obj.x/32), obj.y//32) > 0 then
+                        bot:findPath(round(obj.x/32), obj.y//32)
                         sleep(1000)
                     end
                     collect(2, obj.id)
