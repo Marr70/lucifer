@@ -1,13 +1,34 @@
 --egg benedict flags 32768
-
 bot_list = {}
-goods = {3472, 4602, 4588, 962}
+goods = {}
 locks = {242,9640,202,204,206,1796,4994,7188,408,2950,4428, 4802 ,5814,5260,5980,8470,10410,11550,11586}
 leveling_items = {11638, 7752, 1474}
 
 strg, strg_id = storage:match("([^:]+)|([^:]+)")
 world_oven, door_oven = oven:match("([^:]+)|([^:]+)")
 
+recipes = {}
+if mode:lower() == "arroz" then
+    recipes[1] = {id = 3472, time = 0}
+    recipes[2] = {id = {4602,4588}, time = 33.7}
+    recipes[3] = {id = 962, time = 70}
+    recipes[4] = {id = 18, time = 100}
+elseif mode:lower() == "berry" then
+    recipes[1] = {id = {4562, 874}, time = 0}
+    recipes[2] = {id = 868, time = 26.7}
+    recipes[3] = {id = 196, time = 40}
+    recipes[4] = {id = 18, time = 60}
+end
+
+for _,rcp in pairs(recipes) do
+    if type(rcp.id) == "table" then
+        for _,itm in pairs(rcp.id) do
+            table.insert(goods, itm)
+        end
+    else
+        table.insert(goods, rcp.id)
+    end
+end
 
 if leveling_mode.enabled then
     if leveling_mode.use_hat then
@@ -24,15 +45,6 @@ if leveling_mode.enabled then
         line = line:gsub("%s", "")
         table.insert(bot_list, line)
     end
-end
-
-recipes = {}
-
-if mode:lower() == "arroz" then
-    recipes[1] = {id = 3472, time = 0}
-    recipes[2] = {id = {4602,4588}, time = 33.7}
-    recipes[3] = {id = 962, time = 70}
-    recipes[4] = {id = 18, time = 100}
 end
 
 function create_matrix(number)
@@ -52,6 +64,7 @@ function check_oven(number)
     local oven_space = create_matrix(number)
     local sekip = false
     local count = 0
+    local batch = 0
     for _,tile in pairs(bot:getWorld():getTiles()) do
         for i = 1, math.sqrt(number) do
             for j = 1, math.sqrt(number) do
@@ -65,17 +78,21 @@ function check_oven(number)
                 end
             end
             if sekip then
+                count = 0
                 sekip = false
                 break
             end
         end
-        if count >= number then
-            bot:findPath(tile.x, tile.y)
-            sleep(1000)
-            if debugging then
-                print(string.format("%i,%i is the center", tile.x , tile.y))
+        if count == number then
+            batch = batch + 1
+            if batch == script_id then
+                bot:findPath(tile.x, tile.y)
+                sleep(1000)
+                if debugging then
+                    print(string.format("(%i,%i) is the center", tile.x , tile.y))
+                end
+                break
             end
-            break
         end
     end
 end
@@ -110,8 +127,24 @@ function cook(number)
     for index,bahan in pairs(recipes) do
         if index == 1 then
             for nomoroven,data in ipairs(oven_table) do
-                send_cook(bot.x+data.x, bot.y+data.y, recipes[index].id)
-                elapsed_time[nomoroven] = os.time()
+                if type(bahan.id) == "table" then
+                    for num,item in pairs(bahan.id) do
+                        if num == 1 then
+                            send_cook(bot.x+data.x, bot.y+data.y, item)
+                            elapsed_time[nomoroven] = os.time()
+                        else
+                            bot:place(bot.x+data.x, bot.y+data.y, item)
+                            if debugging then
+                                print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
+                            end
+                        end
+                        sleep(200 + bot:getPing())
+                    end
+                    sleep(200 + bot:getPing())
+                else
+                    send_cook(bot.x+data.x, bot.y+data.y, recipes[index].id)
+                    elapsed_time[nomoroven] = os.time()
+                end
             end
         else
             for nomoroven,data in ipairs(oven_table) do
