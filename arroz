@@ -23,12 +23,17 @@ end
 for _,rcp in pairs(recipes) do
     if type(rcp.id) == "table" then
         for _,itm in pairs(rcp.id) do
-            table.insert(goods, itm)
+            if itm ~= 18 then
+                table.insert(goods, itm)
+            end
         end
     else
-        table.insert(goods, rcp.id)
+        if rcp.id ~= 18 then
+            table.insert(goods, rcp.id)
+        end
     end
 end
+
 
 if leveling_mode.enabled then
     if leveling_mode.use_hat then
