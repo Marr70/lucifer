@@ -220,7 +220,7 @@ function contains(table, value)
 end
 
 function is_valid()
-    local valid_status_list = {BotStatus.offline, BotStatus.online, BotStatus.version_update, BotStatus.server_overload, BotStatus.server_busy, BotStatus.too_many_login, BotStatus.error_connecting, BotStatus.logon_fail, BotStatus.changing_subserver}
+    local valid_status_list = {BotStatus.offline, BotStatus.online, BotStatus.version_update, BotStatus.server_overload, BotStatus.server_busy, BotStatus.too_many_login, BotStatus.error_connecting, BotStatus.logon_fail, BotStatus.changing_subserver, BotStatus.high_load}
     return contains(valid_status_list, bot.status)
 end
 
@@ -363,18 +363,20 @@ function main()
                 end
             end
 
-            if bot:getInventory():getItemCount(6848) == 0 then
-                warp(storage, storage_id)
-                sleep(200)
-                take(6848)
-                sleep(200)
-                if bot:getInventory():getItemCount(6848) > 1 then
-                    drop_item(6848, 1)
-                    sleep(500)
-                end
-                while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
-                    bot:wear(6848)
-                    sleep(1500)
+            if use_luminous then
+                if bot:getInventory():getItemCount(6848) == 0 then
+                    warp(storage, storage_id)
+                    sleep(200)
+                    take(6848)
+                    sleep(200)
+                    if bot:getInventory():getItemCount(6848) > 1 then
+                        drop_item(6848, 1)
+                        sleep(500)
+                    end
+                    while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
+                        bot:wear(6848)
+                        sleep(1500)
+                    end
                 end
             end
 
