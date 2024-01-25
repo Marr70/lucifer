@@ -128,18 +128,20 @@ function take()
         if obj.id == id then
             ex = round(obj.x/32)-1
             ye = math.floor(obj.y/32)
-            bot:findPath(round(obj.x/32)-1,math.floor(obj.y/32))
-            reconnect(currentworld, doorTake, ex, ye)
-            sleep(1500)
+            if not bot:isInTile(round(obj.x/32),math.floor(obj.y/32)) and #bot:getPath(round(obj.x/32)-1,math.floor(obj.y/32)) > 0 then
+                bot:findPath(round(obj.x/32),math.floor(obj.y/32))
+                reconnect(currentworld, doorTake, ex, ye)
+                sleep(500)
+            end
             bot:collect(2)
             reconnect(currentworld, doorTake, ex, ye)
-            sleep(3000)
         end
-        if bot:getInventory():findItem(id) > 0 then
+        if bot:getInventory():findItem(id) == 200 then
             break
         end
     end
 end
+
 
 function empty()
     local currentworld = bot:getWorld().name
