@@ -71,22 +71,34 @@ function check_oven(number)
     local sekip = false
     local count = 0
     local batch = 0
+    local bl_tile = {}
+    local oven_table = {}
+
+    for i = 1, math.sqrt(number) do
+        for j = 1, math.sqrt(number) do
+            local coord = oven_space[i][j]
+            table.insert(oven_table, {x = coord[2], y = coord[1]})
+        end
+    end
+
     for _,tile in pairs(bot:getWorld():getTiles()) do
-        for i = 1, math.sqrt(number) do
-            for j = 1, math.sqrt(number) do
-                local coord = oven_space[i][j]
-                if bot:getWorld():getTile(tile.x + coord[2], tile.y + coord[1]).fg ~= 4618 then
-                    sekip = true
-                    break
-                end
-                if bot:getWorld():getTile(tile.x + coord[2], tile.y + coord[1]).fg == 4618 then
-                    count = count + 1
-                end
-            end
-            if sekip then
+        for _,data in pairs(oven_table) do
+            if bot:getWorld():getTile(tile.x + data.x, tile.y + data.y).fg ~= 4618 then
                 count = 0
-                sekip = false
                 break
+            end
+            if bot:getWorld():getTile(tile.x + data.x, tile.y + data.y).fg == 4618 then
+                if data.x == 0 and data.y == 0 then
+                    count = count + 1
+                else
+                    if not bl_tile[string.format("%i,%i", tile.x + data.x, tile.y + data.y)] then
+                        bl_tile[string.format("%i,%i", tile.x + data.x, tile.y + data.y)] = true
+                        count = count + 1
+                    else
+                        count = 0
+                        break
+                    end
+                end
             end
         end
         if count == number then
@@ -95,12 +107,14 @@ function check_oven(number)
                 bot:findPath(tile.x, tile.y)
                 sleep(1000)
                 if debugging then
-                    print(string.format("(%i,%i) is the center", tile.x , tile.y))
+                    print(string.format("[%s] (%i,%i) is the center\n", bot.name, tile.x , tile.y))
                 end
-                break
+                return
             end
         end
     end
+    bot:stopScript()
+    print(string.format("[%s] There are not enough oven to start cooking (script stopped)\n", bot.name))
 end
 
 function send_cook(x, y, id)
