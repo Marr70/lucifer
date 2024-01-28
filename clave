@@ -42,7 +42,7 @@ function connect(world, id, x, y, direction)
         end
 
         if x and y then
-            if bot:isInWorld() and bot:getTile(bot.x, bot.y).fg ~= 6 then
+            if bot:isInWorld() and bot:getWorld():getTile(bot.x, bot.y).fg ~= 6 then
                 if not bot:isInTile(x,y) and #bot:getPath(x,y) > 0 then
                     bot:findPath(x, y)
                     sleep(1000)
@@ -59,11 +59,11 @@ end
 
 function clave(x,y,id)
    bot:wrench(x,y)
-   sleep(500)
+   sleep(500 + bot:getPing())
    bot:sendPacket(2, "action|dialog_return\ndialog_name|autoclave\ntilex|"..x.."|\ntiley|"..y.."|\nbuttonClicked|tool"..id.."\n")
-   sleep(500)
+   sleep(500 + bot:getPing())
    bot:sendPacket(2, "action|dialog_return\ndialog_name|autoclave\ntilex|"..x.."|\ntiley|"..y.."|\nitemID|"..id.."|\nbuttonClicked|verify")
-   sleep(500)
+   sleep(500 + bot:getPing())
 end
 
 function check190()
@@ -127,7 +127,7 @@ function drop(id, sisa)
                 sleep(500)
                 while bot:getInventory():findItem(id) > sisa and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
                     bot:drop(id, bot:getInventory():findItem(id)-sisa)
-                    sleep(2000)
+                    sleep(3000)
                     connect(world_save, id_door_save, tile.x-1, tile.y, false)
                 end
             end
@@ -145,7 +145,7 @@ function drop_if_full()
         if bot:getInventory():findItem(item) > 190 then
             while bot:getInventory():findItem(item) > 190 do
                 bot:drop(item, bot:getInventory():findItem(item)-150)
-                sleep(2000)
+                sleep(3000)
                 connect(world_clave, id_door_clave, clavex-1, clavey, true)
             end
         end
@@ -224,7 +224,7 @@ function main()
                     end
                     checkgood()
                     clave(clavex,clavey, item)
-                    sleep(500)
+                    sleep(500 + bot:getPing())
                     connect(world_clave, id_door_clave, clavex-1, clavey, nil)
                 end
             end
@@ -242,11 +242,11 @@ function take(world)
             if obj.id == tool and bot:getInventory():findItem(tool) < 200 then
                 if not bot:isInTile(round(obj.x/32), math.floor(obj.y/32)) and #bot:getPath(round(obj.x/32), math.floor(obj.y/32)) > 0 then
                     bot:findPath(round(obj.x/32), math.floor(obj.y/32))
-                    sleep(500)
+                    sleep(1000)
                     connect(world, id_door_tools, round(obj.x/32), math.floor(obj.y/32), nil)
                 end
                 bot:collectObject(obj.oid, 2)
-                sleep(500)
+                sleep(1000)
                 connect(world, id_door_tools, round(obj.x/32), math.floor(obj.y/32), nil)
             end
         end
@@ -307,7 +307,7 @@ while true do
                 if obj.id == tool then
                     if inRadius(round(obj.x/32), math.floor(obj.y/32), 2) then
                         bot:collectObject(obj.oid, 2)
-                        sleep(500)
+                        sleep(1000)
                         connect(world_clave, id_door_clave, round(obj.x/32), math.floor(obj.y/32), nil)
                     else
                         if not bot:isInTile(round(obj.x/32), math.floor(obj.y/32)) and #bot:getPath(round(obj.x/32), math.floor(obj.y/32)) > 0 then
@@ -316,7 +316,7 @@ while true do
                             connect(world_clave, id_door_clave, round(obj.x/32), math.floor(obj.y/32), nil)
                         end
                         bot:collectObject(obj.oid, 2)
-                        sleep(500)
+                        sleep(1000)
                         connect(world_clave, id_door_clave, round(obj.x/32), math.floor(obj.y/32), nil)
                     end
                 end
