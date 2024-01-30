@@ -101,6 +101,46 @@ function spam()
 	end
 end
 
+function remove_colors(var)
+    return var:gsub("`.", "")
+end
+
+function solve(equation)
+    equations = equation:lower():gsub("[%s%=%?]+", "")
+
+    while equations:match("[%*/:x]") do
+        equations = equations:gsub("([%d%.]+)([%*/:x])([%d%.]+)", function(num1, op, num2)
+            if op == "*" or op == "x" then
+              return tostring(tonumber(num1) * tonumber(num2))
+            elseif op == "/" or op == ":" then
+              return tostring(tonumber(num1) / tonumber(num2))
+            end
+        end, 1)
+        
+    end
+    
+    while equations:match("[%+-]") do
+        equations = equations:gsub("([%d%.]+)([%+-])([%d%.]+)", function(num1, op, num2)
+          if op == "+" then
+            return tostring(tonumber(num1) + tonumber(num2))
+          elseif op == "-" then
+            return tostring(tonumber(num1) - tonumber(num2))
+          end
+        end, 1)
+        
+    end  
+    
+    if equations:match("%.0$") then
+        equations = tonumber(equations)
+        if equations then
+            equations = math.floor(equations)
+        end
+        equations = tostring(equations)
+    end
+    
+    return equations
+end
+
 function main()
     if bot:isInWorld() then
         bot:leaveWorld()
@@ -126,20 +166,54 @@ function main()
             else
                 for _,tile in pairs(getTiles()) do
                     if tile.fg == 762 and #bot:getPath(tile.x, tile.y) > 0 then
-			local str = tile:getExtra().label:lower()
-			local pass = "tes"
-			if str:find("world name") then
-				pass = world_spam:upper()
-			elseif str:find(":") then
-				pass = tile:getExtra().label:match(":(.+)"):gsub("%s", "")
-			end
-                        bot:findPath(tile.x, tile.y)
-                        sleep(2000)
-                        bot:enter(pass)
-                        sleep(3000)
+                        local str = tile:getExtra().label
+                        str = remove_colors(str)
+
+                        local pass = "tes"
+                        if str:lower():find("world name") then
+                            pass = world_spam:upper()
+                            print(string.format("trying %s as the password", pass))
+                            if not bot:isInTile(tile.x, tile.y) and #bot:getPath(tile.x, tile.y) > 0 then
+                                bot:findPath(tile.x, tile.y)
+                                sleep(2000)
+                            end
+                            bot:enter(pass)
+                            sleep(3000)
+                            if bot:getWorld():getTile(bot.x , bot.y).fg ~= 762 then
+                                break
+                            end
+                        end
+
+                        if str:lower():find(":") then
+                            pass = str:match(":(.+)"):gsub("%s", "")
+                            print(string.format("trying %s as the password", pass))
+                            if not bot:isInTile(tile.x, tile.y) and #bot:getPath(tile.x, tile.y) > 0 then
+                                bot:findPath(tile.x, tile.y)
+                                sleep(2000)
+                            end
+                            bot:enter(pass)
+                            sleep(3000)
+                            if bot:getWorld():getTile(bot.x , bot.y).fg ~= 762 then
+                                break
+                            end
+                        end
+
+                        if str:lower():find("x") or str:lower():find("/") or str:lower():find("+") or str:lower():find("-") or str:lower():find("*") or str:lower():find(":") or str:lower():find("=") then
+                            pass = solve(str)
+                            print(string.format("trying %s as the password", pass))
+                            if not bot:isInTile(tile.x, tile.y) and #bot:getPath(tile.x, tile.y) > 0 then
+                                bot:findPath(tile.x, tile.y)
+                                sleep(2000)
+                            end
+                            bot:enter(pass)
+                            sleep(3000)
+                            if bot:getWorld():getTile(bot.x , bot.y).fg ~= 762 then
+                                break
+                            end
+                        end
                     end
                 end
-                if #bot:getPath(pos_x, pos_y) > 0 then
+                if not bot:isInTile(pos_x, pos_y) and #bot:getPath(pos_x, pos_y) > 0 then
                     bot:findPath(pos_x, pos_y)
                     sleep(1500)
                 end
