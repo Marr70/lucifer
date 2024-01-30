@@ -406,7 +406,13 @@ function can_drop(x,y,ids,value)
             if (store[ids] % 200) ~= 0 and ((store[ids] % 200) + value) <= 200 then
                 return true
             else
-                return false
+                if (check_waste() + count_store()) < 4000 then
+                    if count_stack() < 20 then
+                        return true
+                    end
+                else
+                    return false
+                end
             end
         else
             if (check_waste() + count_store()) < 4000 then
