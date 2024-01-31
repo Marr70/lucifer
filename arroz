@@ -170,7 +170,9 @@ function send_cook(x, y, id)
         end
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
-        bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
+        if bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 then
+            bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
+        end
         if (delay_cook + bot:getPing()) > 600 then
             sleep(600)
         else
