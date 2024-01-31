@@ -181,10 +181,10 @@ function process_buy_item()
                         bot:findPath(tile.x, tile.y)
                         sleep(1500)
                     end
-                    bot:wrench(bot.x,bot.y)
-                    listenEvents(1)
                     while stock_value == 0 do
-                        sleep(100)
+                        bot:wrench(bot.x,bot.y)
+                        listenEvents(2)
+                        sleep(500)
                     end
                     vbuy(tile.x, tile.y, tile:getExtra().item_price, data.id)
                     sleep(1000)
