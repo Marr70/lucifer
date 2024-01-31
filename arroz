@@ -5,6 +5,7 @@ cooked = 0
 midX = 0
 midY = 0
 disc = false
+put_time = false
 
 strg, strg_id = storage:match("([^:]+)|([^:]+)")
 world_oven, door_oven = Bots[getBot().name:upper()].oven:match("([^:]+)|([^:]+)")
@@ -160,18 +161,27 @@ function check_ingredient_count(number)
     end
 end
 
+function hook(var, netid)
+    if var:get(0):getString() == "OnDialogRequest" then
+        if var:get(1):getString():find("add_label_with_icon|big|`wHome Oven``|left|4618|") then
+            put_time = true
+        end
+    end
+end
+
+addEvent(Event.variantlist, hook)
+
 function send_cook(x, y, id)
     while bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 do
-        bot:place(x,y, id)
-        if (delay_cook + bot:getPing()) > 600 then
-            sleep(600)
-        else
-            sleep(delay_cook + bot:getPing())
-        end
+        runThread(function(ex, ye, ids)
+            getBot():place(ex, ye, ids)
+        end, x , y, id)
+        listenEvents(0.5)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
-        if bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 then
+        if bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 and put_time then
             bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
+            put_time = false
         end
         if (delay_cook + bot:getPing()) > 600 then
             sleep(600)
