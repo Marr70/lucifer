@@ -21,10 +21,10 @@ end
 recipes = {}
 if mode:lower() == "arroz" then
     cooked = 4604
-    recipes[1] = {id = 3472, time = 0}
-    recipes[2] = {id = {4602,4588}, time = 33.7}
-    recipes[3] = {id = 962, time = 70}
-    recipes[4] = {id = 18, time = 100}
+    table.insert(recipes, {id = 3472, time = 0})
+    table.insert(recipes, {id = {4602,4588}, time = 33.7})
+    table.insert(recipes, {id = 962, time = 70})
+    table.insert(recipes, {id = 18, time = 100})
 elseif mode:lower() == "berry" then
     cooked = 4596
     recipes[1] = {id = 4562, time = 0}
@@ -183,13 +183,114 @@ function send_cook(x, y, id)
             bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
             put_time = false
         end
-        if (delay_cook + bot:getPing()) > 600 then
-            sleep(600)
-        else
-            sleep(delay_cook + bot:getPing())
-        end
+        sleep(200)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
+    end
+end
+
+function kuk(number)
+    local oven_space = create_matrix(number)
+    local oven_table = {}
+    local elapsed_time = {}
+    local resepke = {}
+
+    for i = 1, math.sqrt(number) do
+        for j = 1, math.sqrt(number) do
+            local coord = oven_space[i][j]
+            table.insert(oven_table, {x = coord[2], y = coord[1]})
+        end
+    end
+
+    for ke = 1, number do
+        resepke[ke] = 1
+    end
+
+    local function count_resep()
+        for i = 1,number do
+            if resepke[i] < (#recipes+1) then
+                return false
+            end
+        end
+
+        return true
+    end
+
+    while not count_resep() do
+        for nomoroven,data in ipairs(oven_table) do 
+            if elapsed_time[nomoroven] then
+                if resepke[nomoroven] <= #recipes then
+                    if (os.time()-elapsed_time[nomoroven]) >= recipes[resepke[nomoroven]].time then
+                        if type(recipes[resepke[nomoroven]].id) == "table" then
+                            for _,item in pairs(recipes[resepke[nomoroven]].id) do
+                                while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count == (resepke[nomoroven]-1) do
+                                    bot:place(bot.x+data.x, bot.y+data.y, item)
+                                    if debugging then
+                                        print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
+                                    end
+                                    sleep((delay_cook/2) + bot:getPing())
+                                    reconnect(world_oven, door_oven, midX, midY)
+                                    if disc then return end
+                                end
+                            end
+                            sleep((delay_cook/2) + bot:getPing())
+                            resepke[nomoroven] = resepke[nomoroven] + 1
+                            break
+                        elseif recipes[resepke[nomoroven]].id == 18 then
+                            while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count ~= 0 do
+                                bot:hit(bot.x+data.x, bot.y+data.y)
+                                if debugging then
+                                    print(string.format("punch at %i second (oven number %i)", (os.time()-elapsed_time[nomoroven]), nomoroven))
+                                end
+                                sleep(delay_cook + bot:getPing())
+                                reconnect(world_oven, door_oven, midX, midY)
+                                if disc then return end
+                            end
+                            resepke[nomoroven] = resepke[nomoroven] + 1
+                            break
+                        else
+                            while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count == (resepke[nomoroven]-1) do
+                                bot:place(bot.x+data.x, bot.y+data.y, recipes[resepke[nomoroven]].id)
+                                if debugging then
+                                    print(string.format("put %s at %i second (oven number %i)", getInfo(recipes[resepke[nomoroven]].id).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
+                                end
+                                sleep(delay_cook + bot:getPing())
+                                reconnect(world_oven, door_oven, midX, midY)
+                                if disc then return end
+                            end
+                            resepke[nomoroven] = resepke[nomoroven] + 1
+                            break
+                        end
+                    end
+                end
+            else
+                if type(recipes[resepke[nomoroven]].id) == "table" then
+                    for _,item in pairs(recipes[resepke].id) do
+                        if bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count == 0 then
+                            send_cook(bot.x+data.x, bot.y+data.y, item)
+                            elapsed_time[nomoroven] = os.time()
+                            if disc then return end
+                        else
+                            bot:place(bot.x+data.x, bot.y+data.y, item)
+                            if debugging then
+                                print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
+                            end
+                        end
+                        sleep((delay_cook/2) + bot:getPing())
+                        reconnect(world_oven, door_oven, midX, midY)
+                        if disc then return end
+                    end
+                    resepke[nomoroven] = resepke[nomoroven] + 1
+                    break
+                else
+                    send_cook(bot.x+data.x, bot.y+data.y, recipes[resepke[nomoroven]].id)
+                    elapsed_time[nomoroven] = os.time()
+                    if disc then return end
+                    resepke[nomoroven] = resepke[nomoroven] + 1
+                    break
+                end
+            end
+        end
     end
 end
 
@@ -662,7 +763,7 @@ function main_normal()
         sleep(1000)
         check_ingredient_count(oven_amount)
         sleep(1000)
-        cook(oven_amount)
+        kuk(oven_amount)
         sleep(2000)
     end
 
