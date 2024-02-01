@@ -81,34 +81,79 @@ function check190()
     end
 end
 
-function tile_drop(x,y,ids,value)
-    local stack = 0
-    local count = 0
+function can_drop(x,y,ids,value)
     local store = {}
+    local stack = {}
+
     for _,obj in pairs(bot:getWorld():getObjects()) do
-        if math.floor(obj.x/32) == x and math.floor(obj.y/32) == y then
-            stack = stack + 1
-            count = count + obj.count
-            if store[obj.id] then
-                store[obj.id] = store[obj.id] + obj.count
-            else
-                store[obj.id] = obj.count
-            end
+        if round(obj.x/32) == x and obj.y//32 == y then
+            store[obj.id] = (store[obj.id] or 0) + obj.count
+            stack[obj.id] = true
         end
     end
 
-    if count <= (4000-value) then
-        if stack < 19 then
-            return true
+    local function count_stack()
+        local count = 0 
+
+        for _ in pairs(stack) do
+            count = count + 1
         end
-        for objId, itm in pairs(store) do
-            if objId == ids then
-                if math.ceil(itm%200) ~= 0 and math.ceil(itm%200) <= (200-value) then
-                    return true
+        return count
+    end
+
+    local function count_store()
+        local count = 0
+
+        for _,cout in pairs(store) do
+            count = count + cout
+        end
+
+        return count
+    end
+
+    local function check_waste()
+        local cout = 0 
+
+        for id, count in pairs(store) do
+            if count % 200 ~= 0 then
+                cout = cout + (200 - (count % 200))
+            end
+        end
+
+        return cout
+    end
+
+    local function check_store(ids)
+        for key, _ in pairs(store) do
+            if key == ids then
+                return true
+            end
+        end
+        return false
+    end
+
+    if (count_store()+value) <= 4000 then
+        if check_store(ids) then
+            if (store[ids] % 200) ~= 0 and ((store[ids] % 200) + value) <= 200 then
+                return true
+            else
+                if (check_waste() + count_store()) < 4000 then
+                    if count_stack() < 20 then
+                        return true
+                    end
                 else
                     return false
                 end
             end
+        else
+            if (check_waste() + count_store()) < 4000 then
+                if count_stack() < 20 then
+                    return true
+                end
+            else
+                return false
+            end
+
         end
     end
     return false
@@ -117,7 +162,7 @@ end
 function drop(id, sisa)
     for _,tile in pairs(bot:getWorld():getTiles()) do
         if tile.fg == pos_drop then
-            if tile_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
+            if can_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
                 if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
                     bot:findPath(tile.x-1, tile.y)
                     sleep(1000)
@@ -125,7 +170,7 @@ function drop(id, sisa)
                 end
                 bot:setDirection(false)
                 sleep(500)
-                while bot:getInventory():findItem(id) > sisa and tile_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
+                while bot:getInventory():findItem(id) > sisa and can_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
                     bot:drop(id, bot:getInventory():findItem(id)-sisa)
                     sleep(3000)
                     connect(world_save, id_door_save, tile.x-1, tile.y, false)
