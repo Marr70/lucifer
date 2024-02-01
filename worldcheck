@@ -1,91 +1,6 @@
-bot = getBot()
-locks = {242,9640,202,204,206,1796,4994,7188,408,2950,4428, 4802 ,5814,5260,5980,8470,10410,11550,11586}
-count_ready = {}
-count_unready = {}
-count_total = {}
-nuked = false
-
-function check_tree()
-    for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == seed_id then
-            if tile:canHarvest() then
-                count_ready[tile.fg] = (count_ready[tile.fg] or 0) + 1
-            else
-                count_unready[tile.fg] = (count_unready[tile.fg] or 0) + 1
-            end
-            count_total[tile.fg] = (count_total[tile.fg] or 0) + 1
-        end
-    end
-end
-
-function check_toxic()
-    local count = 0
-    for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == 778 then
-            count = count + 1
-        end
-    end
-    if count > 0 then
-        return count
-    else
-        return 0
-    end
-end
-
-function contains(table, value)
-    for i, element in pairs(table) do
-        if element == value then
-            return true
-        end
-    end
-    return false
-end
-
-function check_lock()
-    for _,tile in pairs(bot:getWorld():getTiles()) do
-        if contains(locks, tile.fg) then
-            return getInfo(tile.fg).name
-        end
-    end
-    return nil
-end
-
-function check_fire()
-    local gscan = bot:getWorld().growscan
-    for id, count in pairs(gscan:getTiles()) do
-        if id == 14142 then
-            return count
-        end
-    end
-    return 0
-end
-
-function hook(var, netid)
-    if var:get(0):getString() == "OnConsoleMessage" then
-        if var:get(1):getString():find("inaccessible") then
-            nuked = true
-        elseif var:get(1):getString():find("unknown reason") then
-            nuked = true
-        end
-    end
-end
-
-addEvent(Event.variantlist, hook)
-
-listnuked = "[[NUKED WORLD]]\n"
-listnotnuked = "[[NOT NUKED WORLD]]\n"
-count_nuked = 0
-count_notnuked = 0
-
-function logs(text)
-    local filewrite = io.open(path, "w")
-    filewrite:write(text.."\n")
-    filewrite:close()
-end
-
 for i,world in pairs(farm_list) do
     while bot:getWorld().name:upper() ~= world:upper() and not nuked do
-        bot:warp(world)
+        bot:sendPacket(3, "action|join_request\nname|"..world:upper().."\ninvitedWorld|0")
         listenEvents(6)
     end
     if nuked then
@@ -104,4 +19,3 @@ for i,world in pairs(farm_list) do
     listworld = listnuked.."\n\n"..listnotnuked
     logs(listworld)
 end
-
