@@ -6,13 +6,41 @@ midX = 0
 midY = 0
 disc = false
 put_time = false
-
+multi = false
+BotAll = getBots()
 strg, strg_id = storage:match("([^:]+)|([^:]+)")
-world_oven, door_oven = Bots[getBot().name:upper()].oven:match("([^:]+)|([^:]+)")
-level_limit = Bots[getBot().name:upper()].level_limit
-delay_cook = Bots[getBot().name:upper()].delay_cook
-oven_amount = Bots[getBot().name:upper()].oven_amount
-mode = Bots[getBot().name:upper()].mode
+
+for botname, data in pairs(Bots) do
+    if botname:lower() == bot.name:lower() then
+        world_oven, door_oven = data.oven:match("([^:]+)|([^:]+)")
+        level_limit = data.level_limit
+        delay_cook = data.delay_cook
+        oven_amount = data.oven_amount
+        mode = data.mode
+        break
+    end
+end
+
+queue = {}
+function check_wn()
+    local storebots = {}
+    for _,botdata in pairs(BotAll) do
+        for botname,data in pairs(Bots) do
+            if botname:lower() == botdata.name:lower() then
+                table.insert(storebots, {name = botdata.name, world = data.oven})
+            end
+        end
+    end
+    
+    local count = 0
+    for _,data in pairs(storebots) do
+        if data.world:lower():find(world_oven:lower()) then
+            count = count + 1
+            queue[count] = data.name
+        end
+    end
+end
+check_wn()
 
 if delay_cook < 200 then
     delay_cook = 200
@@ -75,6 +103,15 @@ function create_matrix(number)
     return matrix
 end
 
+function get_index_queue()
+    for index,botname in pairs(queue) do
+        if botname:lower() == bot.name:lower() then
+            return index
+        end
+    end
+    return 0
+end
+
 function check_oven(number)
     local oven_space = create_matrix(number)
     local sekip = false
@@ -112,7 +149,7 @@ function check_oven(number)
         end
         if count == number then
             batch = batch + 1
-            if batch == script_id then
+            if batch == get_index_queue() then
                 midX = tile.x
                 midY = tile.y
                 if not bot:isInTile(midX, midY) and #bot:getPath(midX, midY) > 0 then
@@ -175,15 +212,15 @@ function send_cook(x, y, id)
     while bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 do
         runThread(function(ex, ye, ids)
             getBot():place(ex, ye, ids)
-        end, x , y, id)
-        listenEvents(0.5)
+        end, x, y, id)
+        listenEvents(1)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
         if bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 and put_time then
-            bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
             put_time = false
+            bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
         end
-        sleep(200)
+        sleep(200 + bot:getPing())
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
     end
@@ -294,6 +331,7 @@ function kuk(number)
     end
 end
 
+--[[ cook lama
 function cook(number)
     local oven_space = create_matrix(number)
     local oven_table = {}
@@ -383,6 +421,7 @@ function cook(number)
         end
     end
 end
+]]
 
 function warp(to, id)
     while bot:getWorld().name:upper() ~= to:upper() do
