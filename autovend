@@ -189,10 +189,10 @@ function process_buy_item()
                     vbuy(tile.x, tile.y, tile:getExtra().item_price, data.id)
                     sleep(1000)
                 end
+                checkgoods()
             end
         end
     end
-    checkgoods()
 end
 
 function getpos()
