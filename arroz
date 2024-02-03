@@ -184,7 +184,7 @@ function check_ingredient_count(number)
         while bot:getWorld():getTile(bot.x+data.x,bot.y+data.y):getExtra().ingredient_count ~= 0 do
             for i = 1,8 do
                 bot:hit(bot.x+data.x,bot.y+data.y)
-                sleep(800 + bot:getPing())
+                sleep(800)
                 reconnect(world_oven, door_oven, midX, midY)
                 if bot:getWorld():getTile(bot.x+data.x,bot.y+data.y):getExtra().ingredient_count == 0 then
                     break
@@ -201,7 +201,7 @@ end
 
 function hook(var, netid)
     if var:get(0):getString() == "OnDialogRequest" then
-        if var:get(1):getString():find("add_label_with_icon|big|`wHome Oven``|left|4618|") then
+        if var:get(1):getString():find("Home Oven") then
             put_time = true
         end
     end
@@ -219,7 +219,7 @@ function send_cook(x, y, id)
             put_time = false
             bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
         end
-        sleep(200 + bot:getPing())
+        sleep(250)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
     end
@@ -264,13 +264,13 @@ function kuk(number)
                                     if debugging then
                                         print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
                                     end
-                                    sleep((delay_cook/2) + bot:getPing())
+                                    sleep((delay_cook/2))
                                     reconnect(world_oven, door_oven, midX, midY)
                                     if disc then return end
                                 end
                                 resepke[nomoroven] = resepke[nomoroven] + 1
                             end
-                            sleep((delay_cook/2) + bot:getPing())
+                            sleep((delay_cook/2))
                             break
                         elseif recipes[resepke[nomoroven]].id == 18 then
                             while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count ~= 0 do
@@ -278,7 +278,7 @@ function kuk(number)
                                 if debugging then
                                     print(string.format("punch at %i second (oven number %i)", (os.time()-elapsed_time[nomoroven]), nomoroven))
                                 end
-                                sleep(delay_cook + bot:getPing())
+                                sleep(delay_cook)
                                 reconnect(world_oven, door_oven, midX, midY)
                                 if disc then return end
                             end
@@ -290,7 +290,7 @@ function kuk(number)
                                 if debugging then
                                     print(string.format("put %s at %i second (oven number %i)", getInfo(recipes[resepke[nomoroven]].id).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
                                 end
-                                sleep(delay_cook + bot:getPing())
+                                sleep(delay_cook)
                                 reconnect(world_oven, door_oven, midX, midY)
                                 if disc then return end
                             end
@@ -312,7 +312,7 @@ function kuk(number)
                                 print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
                             end
                         end
-                        sleep((delay_cook/2) + bot:getPing())
+                        sleep((delay_cook/2))
                         reconnect(world_oven, door_oven, midX, midY)
                         if disc then return end
                         resepke[nomoroven] = resepke[nomoroven] + 1
