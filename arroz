@@ -1,6 +1,7 @@
 --egg benedict flags 32768
 bot = getBot()
 locks = {242,9640,202,204,206,1796,4994,7188,408,2950,4428, 4802 ,5814,5260,5980,8470,10410,11550,11586}
+gagal = {4576, 4574}
 cooked = 0
 midX = 0
 midY = 0
@@ -730,6 +731,15 @@ function reconnect(world, id, x, y)
     end
 end
 
+function trash_waste()
+    for _,item in ipairs(bot:getInventory():getItems()) do
+        if contains(gagal, item.id) then
+            bot:trash(item.id, bot:getInventory():findItem(item.id))
+            sleep(1000)
+        end
+    end
+end
+
 function main_normal()
     while bot.level < level_limit do
         disc = false
@@ -803,6 +813,8 @@ function main_normal()
         check_ingredient_count(oven_amount)
         sleep(1000)
         kuk(oven_amount)
+        sleep(1000)
+        trash_waste()
         sleep(2000)
     end
 
