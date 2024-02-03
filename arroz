@@ -211,9 +211,7 @@ addEvent(Event.variantlist, hook)
 
 function send_cook(x, y, id)
     while bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 do
-        runThread(function(ex, ye, ids)
-            getBot():place(ex, ye, ids)
-        end, x, y, id)
+        bot:place(x,y,id)
         listenEvents(1)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
@@ -270,9 +268,9 @@ function kuk(number)
                                     reconnect(world_oven, door_oven, midX, midY)
                                     if disc then return end
                                 end
+                                resepke[nomoroven] = resepke[nomoroven] + 1
                             end
                             sleep((delay_cook/2) + bot:getPing())
-                            resepke[nomoroven] = resepke[nomoroven] + 1
                             break
                         elseif recipes[resepke[nomoroven]].id == 18 then
                             while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count ~= 0 do
@@ -317,8 +315,8 @@ function kuk(number)
                         sleep((delay_cook/2) + bot:getPing())
                         reconnect(world_oven, door_oven, midX, midY)
                         if disc then return end
+                        resepke[nomoroven] = resepke[nomoroven] + 1
                     end
-                    resepke[nomoroven] = resepke[nomoroven] + 1
                     break
                 else
                     send_cook(bot.x+data.x, bot.y+data.y, recipes[resepke[nomoroven]].id)
