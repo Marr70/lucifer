@@ -35,7 +35,7 @@ function check_wn()
     
     local count = 0
     for _,data in pairs(storebots) do
-        if data.world:lower():find(world_oven:lower()) then
+        if data.world:lower():find(world_oven:lower().."|") then
             count = count + 1
             queue[count] = data.name
         end
