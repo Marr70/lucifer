@@ -219,6 +219,7 @@ function send_cook(x, y, id)
             put_time = false
             bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
         end
+        sleep(100)
         if bot:getWorld():getTile(x,y):getExtra().ingredient_count ~= 0 then
             break
         end
