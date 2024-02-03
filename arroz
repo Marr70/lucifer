@@ -211,15 +211,17 @@ addEvent(Event.variantlist, hook)
 
 function send_cook(x, y, id)
     while bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 do
-        bot:place(x,y,id)
         listenEvents(1)
+        runThread(function(ex, ye,ids)
+            getBot():place(ex,ye,ids)
+        end, x, y, id)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
         if bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 and put_time then
             put_time = false
             bot:sendPacket(2, "action|dialog_return\ndialog_name|oven\ntilex|"..x.."|\ntiley|"..y.."|\ncookthis|"..id.."|\nbuttonClicked|low\n\ndisplay_timer|0")
         end
-        sleep(250)
+        sleep(500)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
     end
