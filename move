@@ -170,7 +170,7 @@ function take()
                 reconnect(currentworld, doorTake, ex, ye)
                 sleep(500)
             end
-            bot:collect(2)
+            bot:collectObject(obj.oid, 2)
             reconnect(currentworld, doorTake, ex, ye)
         end
         if bot:getInventory():findItem(id) == 200 then
@@ -189,7 +189,7 @@ function empty()
                 bot:findPath(tile.x,tile.y)
                 reconnect(currentworld, doorTake, ex, ye)
                 sleep(1500)
-                bot:wrench(getpos().x, getpos().y)
+                bot:wrench(bot.x, bot.y)
                 sleep(1000)
                 bot:sendPacket(2,"action|dialog_return\ndialog_name|vending\ntilex|"..tile.x.."|\ntiley|"..tile.y.."|\nbuttonClicked|pullstock\n\nsetprice|0\nchk_peritem|0\nchk_perlock|1")
                 reconnect(currentworld, doorTake, ex, ye)
@@ -209,7 +209,7 @@ function droprata()
 
     for y = 53,0,-1 do
         for x = 1,99 do
-            if y <= getpos().y and x > getpos().x then
+            if y <= bot.y and x > bot.x then
                 if can_drop(x,y,id, bot:getInventory():findItem(id)) then
                     ex = x + 1
                     ye = y
@@ -246,7 +246,7 @@ function put()
                     bot:findPath(tile.x,tile.y)
                     reconnect(worldDestination,doorDestination, ex, ye)
                     sleep(1500)
-                    bot:wrench(getpos().x, getpos().y)
+                    bot:wrench(bot.x, bot.y)
                     sleep(1000)
                     bot:sendPacket(2,"action|dialog_return\ndialog_name|vending\ntilex|"..tile.x.."|\ntiley|"..tile.y.."|\nstockitem|"..id)
                     reconnect(worldDestination,doorDestination, ex, ye)
