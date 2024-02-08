@@ -8,6 +8,7 @@ midY = 0
 disc = false
 put_time = false
 multi = false
+take_bene = true
 BotAll = getBots()
 strg, strg_id = storage:match("([^:]+)|([^:]+)")
 
@@ -64,7 +65,19 @@ elseif mode:lower() == "berry" then
 end
 
 goods = {}
-leveling_items = {}
+gear = {}
+if use_food_buff then
+    table.insert(goods, 1474)
+    table.insert(gear, 1474)
+end
+if use_hat then
+    table.insert(goods, 11638)
+    table.insert(gear, 11638)
+end
+if use_hand then
+    table.insert(goods, 7752)
+    table.insert(gear, 7752)
+end
 for _,rcp in pairs(recipes) do
     if type(rcp.id) == "table" then
         for _,itm in pairs(rcp.id) do
@@ -77,18 +90,6 @@ for _,rcp in pairs(recipes) do
             table.insert(goods, rcp.id)
         end
     end
-end
-if use_hat then
-    table.insert(goods, 11638)
-    table.insert(leveling_items, 11638)
-end
-if use_hand then
-    table.insert(goods, 7752)
-    table.insert(leveling_items, 7752)
-end
-if use_food_buff then
-    table.insert(goods, 1474)
-    table.insert(leveling_items, 1474)
 end
 
 function create_matrix(number)
@@ -203,6 +204,8 @@ function hook(var, netid)
     if var:get(0):getString() == "OnDialogRequest" then
         if var:get(1):getString():find("Home Oven") then
             put_time = true
+        elseif var:get(1):getString():find("Food: Extra XP") then
+            take_bene = false
         end
     end
 end
@@ -211,7 +214,11 @@ addEvent(Event.variantlist, hook)
 
 function send_cook(x, y, id)
     while bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 do
-        bot:place(x, y,id)
+        sleep(100)
+        if bot:getWorld():getTile(x,y):getExtra().ingredient_count ~= 0 then
+            break
+        end
+        bot:place(x, y, id)
         listenEvents(1)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
@@ -226,10 +233,15 @@ function send_cook(x, y, id)
         sleep(500)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
+        if bot:getInventory():findItem(id) == 0 then
+            return false
+        end
     end
+    return true
 end
 
 function kuk(number)
+    local keskip = false
     local oven_space = create_matrix(number)
     local oven_table = {}
     local elapsed_time = {}
@@ -271,8 +283,18 @@ function kuk(number)
                                     sleep((delay_cook/2))
                                     reconnect(world_oven, door_oven, midX, midY)
                                     if disc then return end
+                                    if bot:getInventory():findItem(item) == 0 then
+                                        keskip = true
+                                        break
+                                    end
                                 end
-                                resepke[nomoroven] = resepke[nomoroven] + 1
+                                if keskip then
+                                    keskip = false
+                                    resepke[nomoroven] = #recipes+1
+                                    break
+                                else
+                                    resepke[nomoroven] = resepke[nomoroven] + 1
+                                end
                             end
                             sleep((delay_cook/2))
                             break
@@ -297,8 +319,17 @@ function kuk(number)
                                 sleep(delay_cook)
                                 reconnect(world_oven, door_oven, midX, midY)
                                 if disc then return end
+                                if bot:getInventory():findItem(recipes[resepke[nomoroven]].id) == 0 then
+                                    keskip = true
+                                    break
+                                end
                             end
-                            resepke[nomoroven] = resepke[nomoroven] + 1
+                            if keskip then
+                                keskip = false
+                                resepke[nomoroven] = #recipes+1
+                            else
+                                resepke[nomoroven] = resepke[nomoroven] + 1
+                            end
                             break
                         end
                     end
@@ -307,9 +338,14 @@ function kuk(number)
                 if type(recipes[resepke[nomoroven]].id) == "table" then
                     for _,item in pairs(recipes[resepke].id) do
                         if bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count == 0 then
-                            send_cook(bot.x+data.x, bot.y+data.y, item)
-                            elapsed_time[nomoroven] = os.time()
-                            if disc then return end
+                            if send_cook(bot.x+data.x, bot.y+data.y, item) then
+                                elapsed_time[nomoroven] = os.time()
+                                if disc then return end
+                            else
+                                elapsed_time[nomoroven] = os.time()
+                                keskip = true
+                                break
+                            end
                         else
                             bot:place(bot.x+data.x, bot.y+data.y, item)
                             if debugging then
@@ -319,14 +355,30 @@ function kuk(number)
                         sleep((delay_cook/2))
                         reconnect(world_oven, door_oven, midX, midY)
                         if disc then return end
-                        resepke[nomoroven] = resepke[nomoroven] + 1
+                        if keskip then
+                            keskip = false
+                            resepke[nomoroven] = #recipes+1
+                            break
+                        else
+                            resepke[nomoroven] = resepke[nomoroven] + 1
+                        end
                     end
                     break
                 else
-                    send_cook(bot.x+data.x, bot.y+data.y, recipes[resepke[nomoroven]].id)
-                    elapsed_time[nomoroven] = os.time()
-                    if disc then return end
-                    resepke[nomoroven] = resepke[nomoroven] + 1
+                    if send_cook(bot.x+data.x, bot.y+data.y, recipes[resepke[nomoroven]].id) then
+                        elapsed_time[nomoroven] = os.time()
+                        if disc then return end
+                    else
+                        elapsed_time[nomoroven] = os.time()
+                        keskip = true
+                    end
+                    if keskip then
+                        keskip = false
+                        resepke[nomoroven] = #recipes+1
+                        break
+                    else
+                        resepke[nomoroven] = resepke[nomoroven] + 1
+                    end
                     break
                 end
             end
@@ -466,7 +518,7 @@ function collect(range, id)
 end
 
 function take(id)
-    if contains(leveling_items, id) then
+    if contains(gear, id) then
         while bot:getInventory():findItem(id) == 0 do
             for _,obj in pairs(bot:getWorld():getObjects()) do
                 if obj.id == id then
@@ -583,10 +635,11 @@ function can_drop(x,y,ids,value)
     return false
 end
 
-function drop(id, sisa, xawal)
+function drop(id, sisa)
+    local xawal = bot.x
     if id == cooked then
         for _,tile in pairs(bot:getWorld():getTiles()) do
-            if tile.fg == pos_arroz then
+            if tile.fg == pos_cooked then
                 if can_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
                     if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
                         bot:findPath(tile.x-1, tile.y)
@@ -601,14 +654,14 @@ function drop(id, sisa, xawal)
                         reconnect(strg, strg_id, tile.x-1, tile.y)
                     end
                 end
-                if bot:getInventory():findItem(id) == sisa then
-                    break
-                end
+            end
+            if bot:getInventory():findItem(id) == sisa then
+                break
             end
         end
-    else
+    elseif contains(gear, id) then
         for _,tile in pairs(bot:getWorld():getTiles()) do
-            if tile.fg == pos_drop then
+            if tile.fg == pos_gear then
                 if tile.x ~= xawal then
                     if can_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
                         if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
@@ -624,10 +677,34 @@ function drop(id, sisa, xawal)
                             reconnect(strg, strg_id, tile.x-1, tile.y)
                         end
                     end
-                    if bot:getInventory():findItem(id) == sisa then
-                        break
+                end
+            end
+            if bot:getInventory():findItem(id) == sisa then
+                break
+            end
+        end
+    else
+        for _,tile in pairs(bot:getWorld():getTiles()) do
+            if tile.fg == pos_ingredient then
+                if tile.x ~= xawal then
+                    if can_drop(tile.x, tile.y, id, bot:getInventory():findItem(id)-sisa) then
+                        if not bot:isInTile(tile.x-1, tile.y) and #bot:getPath(tile.x-1, tile.y) > 0 then
+                            bot:findPath(tile.x-1, tile.y)
+                            sleep(1000)
+                            reconnect(strg, strg_id, tile.x-1, tile.y)
+                        end
+                        bot:setDirection(false)
+                        sleep(500)
+                        while bot:getInventory():findItem(id) > sisa and can_drop(tile.x,tile.y,id, bot:getInventory():findItem(id) - sisa) do
+                            bot:drop(id, bot:getInventory():findItem(id)-sisa)
+                            sleep(3000)
+                            reconnect(strg, strg_id, tile.x-1, tile.y)
+                        end
                     end
                 end
+            end
+            if bot:getInventory():findItem(id) == sisa then
+                break
             end
         end
     end
@@ -753,35 +830,39 @@ function main_normal()
         end
 
         for _,item in pairs(goods) do
-            if contains(leveling_items, item) then
+            if contains(gear, item) then
                 if bot:getInventory():findItem(item) == 0 then
                     if item == 1474 then
-                        local playermod
-                        for _,player in pairs(bot:getWorld():getPlayers()) do
-                            if player.name:upper():find(string.format("%s", bot.name:upper())) then
-                                playermod = player.avatarFlags
-                            end
+                        if not bot:isInWorld() then
+                            warp(world_oven, door_oven)
+                            sleep(200)
                         end
-                        if playermod ~= 32768 then
+
+                        runThread(function()
+                            getBot():wrenchPlayer(getLocal().netid)
+                        end)
+                        listenEvents(2)
+
+                        if take_bene then
                             warp(strg, strg_id)
                             sleep(200)
                             take(item)
                             if bot:getInventory():getItemCount(item) > 1 then
-                                local awalx = bot.x
-                                drop(item, 1, awalx)
+                                drop(item, 1)
                                 sleep(500)
                             end
                             sleep(1000)
                             bot:use(1474)
                             sleep(1000)
+                        else
+                            take_bene = true
                         end
                     else
                         warp(strg, strg_id)
                         sleep(200)
                         take(item)
                         if bot:getInventory():getItemCount(item) > 1 then
-                            local awalx = bot.x
-                            drop(item, 1, awalx)
+                            drop(item, 1)
                             sleep(500)
                         end
                         sleep(1000)
@@ -797,8 +878,7 @@ function main_normal()
                     sleep(200)
                     take(item)
                     if bot:getInventory():getItemCount(item) > limit_take_item then
-                        local awalx = bot.x
-                        drop(item, limit_take_item, awalx)
+                        drop(item, limit_take_item)
                         sleep(200)
                     end
                 end
