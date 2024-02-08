@@ -1,0 +1,573 @@
+done = false
+
+if storage_world:find("|") then
+    storage, storage_id = storage_world:match("([^|]+)|([^|]+)")
+else
+    storage = storage_world
+    storage_id = nil
+end
+
+if geiger_charger_world:find("|") then
+    charger, charger_id = geiger_charger_world:match("([^|]+)|([^|]+)")
+else
+    charger = geiger_charger_world
+    charger_id = nil
+end
+
+items = {6416, 3196, 1500, 1498, 2806, 2804, 8270, 8272, 8274, 4676, 4678, 4680, 4682, 4652, 4650, 4648, 4646, 11186,10086, 10084,2206, 2244, 2246, 2242, 2248, 2250, 3792, 3306, 4654, 3204}
+
+bot_list = {}
+for line in account_list:gmatch("[^\n]+") do
+    line = line:gsub("%s", "")
+    table.insert(bot_list, line)
+end
+
+wh = Webhook.new(webhook_url)
+wh.embed1.use = true
+wh.embed1.color = 0xFFFFFF
+wh.embed1.title = "Lucifer Geiger Logs"
+
+function log_msg(message)
+    bot:getLog():append(string.format("[AutoGeiger]: %s\n", message))
+    if webhook_enabled then
+        wh.embed1.description = string.format("**%s** %s", bot.name, message)
+        wh:send()
+    end
+end
+
+function is_in_world(geiger_world)
+    return bot:getWorld().name:upper() == geiger_world:upper()
+end
+
+function is_in_tile(x, y)
+    player = bot:getWorld():getLocal()
+    if not player then
+        return false
+    end
+    return math.floor(player.posx / 32) == x and math.floor(player.posy / 32) == y
+end
+
+function round(n)
+    return n % 1 > 0.5 and math.ceil(n) or math.floor(n)
+end
+
+function can_drop(x,y,ids,value)
+    local store = {}
+    local stack = {}
+
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if round(obj.x/32) == x and obj.y//32 == y then
+            store[obj.id] = (store[obj.id] or 0) + obj.count
+            stack[obj.id] = true
+        end
+    end
+
+    local function count_stack()
+        local count = 0 
+
+        for _ in pairs(stack) do
+            count = count + 1
+        end
+        return count
+    end
+
+    local function count_store()
+        local count = 0
+
+        for _,cout in pairs(store) do
+            count = count + cout
+        end
+
+        return count
+    end
+
+    local function check_waste()
+        local cout = 0 
+
+        for id, count in pairs(store) do
+            if count % 200 ~= 0 then
+                cout = cout + (200 - (count % 200))
+            end
+        end
+
+        return cout
+    end
+
+    local function check_store(ids)
+        for key, _ in pairs(store) do
+            if key == ids then
+                return true
+            end
+        end
+        return false
+    end
+
+    if (count_store()+value) <= 4000 then
+        if check_store(ids) then
+            if (store[ids] % 200) ~= 0 and ((store[ids] % 200) + value) <= 200 then
+                return true
+            else
+                if (check_waste() + count_store()) < 4000 then
+                    if count_stack() < 20 then
+                        return true
+                    end
+                else
+                    return false
+                end
+            end
+        else
+            if (check_waste() + count_store()) < 4000 then
+                if count_stack() < 20 then
+                    return true
+                end
+            else
+                return false
+            end
+
+        end
+    end
+    return false
+end
+
+function warp(to, id)
+    while bot:getWorld().name:upper() ~= to:upper() do
+        if id and id ~= "" then
+            bot:warp(to, id)
+        else
+            bot:warp(to)
+        end
+        sleep(6000)
+        connect()
+    end
+    if id == "" or id == nil then
+        return
+    end
+    while bot:getWorld():getTile(bot.x, bot.y).fg == 6 do
+        bot:warp(to, id)
+        sleep(6000)
+        connect()
+    end
+end
+
+function drop_item(item)
+    go_drop()
+
+    player = bot:getWorld():getLocal()
+    if not player then
+        -- ("NetAvatar is not initialized yet.")
+        sleep(200)
+        return
+    end
+
+    for y = 53,0,-1 do
+        if y <= pos_drop.y then
+            if can_drop(pos_drop.x, y, item, bot:getInventory():findItem(item)) then
+                if not is_in_tile(pos_drop.x-1, y) then
+                    bot:findPath(pos_drop.x-1, y)
+                    sleep(2000)
+                    return
+                else
+                    break
+                end
+            end
+        end
+    end
+
+    item_count = bot:getInventory():findItem(item)
+    if item_count > 0 then
+        log_msg(string.format("Dropping Reward: %ix %s", item_count, getInfo(item).name))
+        bot:drop(item, item_count)
+        sleep(3000) -- Required for now.
+    end
+end
+
+function checkinventory()
+    inventory = bot:getInventory()
+    for i, item in pairs(items) do
+        if trash_bad_item then
+            if inventory:findItem(item) > 0 then
+                if contains(bad_items, item) then
+                    item_count = bot:getInventory():findItem(item)
+                    log_msg(string.format("Trashing Items: %ix %s", item_count, getInfo(item).name))
+                    sleep(1500)
+                    bot:trash(item, inventory:getItemCount(item))
+                    sleep(500)
+                    sleep(1500)
+                else
+                    return item
+                 end
+            end
+        else
+            if inventory:findItem(item) > 0 then
+                return item
+            end
+        end
+    end
+
+    return 0
+end
+
+function go_back()
+    if not is_in_world(geiger_world) then
+        warp(geiger_world)
+        sleep(warp_interval)
+        return false
+    end
+
+    return true
+end
+
+function go_drop()
+    if not is_in_world(storage) then
+        warp(storage, storage_id)
+        sleep(warp_interval)
+        return false
+    end
+
+    return true
+end
+
+function go_charge()
+    if not is_in_world(charger) then
+        warp(charger, charger_id)
+        sleep(warp_interval)
+        return false
+    end
+
+    return true
+end
+
+function process_auto_geiger()
+    item = checkinventory()
+    if item > 0 then
+        bot.auto_geiger.enabled = false
+        drop_item(item)
+    else
+        if bot:getInventory():getItem(2286).isActive then
+            done = true
+            return
+        end
+        bot.auto_geiger.enabled = go_back()
+    end
+    sleep(500)
+end
+
+function contains(table, value)
+    for i, element in pairs(table) do
+        if element == value then
+            return true
+        end
+    end
+    return false
+end
+
+function is_valid()
+    local valid_status_list = {BotStatus.offline, BotStatus.online, BotStatus.version_update, BotStatus.server_overload, BotStatus.server_busy, BotStatus.too_many_login, BotStatus.error_connecting, BotStatus.logon_fail, BotStatus.changing_subserver, BotStatus.location_banned, BotStatus.maintenance}
+    return contains(valid_status_list, bot.status)
+end
+
+function connect()
+    while bot.status ~= BotStatus.online do
+        sleep(20000)
+        if not is_valid() then
+            while not is_valid() do
+                sleep(3000)
+            end
+        end
+    end
+end
+
+function modDetect()
+    local bot = getBot()
+    local status = bot.status
+
+    if status == BotStatus.mod_entered then
+        local bots = getBots()
+
+        for _, otherBot in pairs(bots) do
+            otherBot.auto_reconnect = false
+            otherBot:disconnect()
+        end
+
+        sleep(120000000000000000000000000000000000000)
+
+        for _, otherBot in pairs(bots) do
+            sleep(math.random(12000, 27000))
+            otherBot.auto_reconnect = true
+        end
+    end
+end
+
+function isInRadius(x, y, range)
+    return bot.x <= (x+range) and bot.y <= (y+range)
+end
+
+function collect(range, id)
+    for _,obj in pairs(bot:getWorld():getObjects()) do
+        if id ~= nil and id ~= 0 and obj.id == id then
+            if isInRadius(round(obj.x/32), obj.y//32, range) then
+                bot:collectObject(obj.oid, range)
+                break
+            end
+        end
+    end
+end
+
+function take(id)
+    while bot:getInventory():findItem(id) == 0 do
+        for _,obj in pairs(bot:getWorld():getObjects()) do
+            if obj.id == id then
+                if not bot:isInTile(round(obj.x/32)-1, obj.y//32) and #bot:getPath(round(obj.x/32)-1, obj.y//32) > 0 then
+                    bot:findPath(round(obj.x/32)-1, obj.y//32)
+                    sleep(1000)
+                end
+                collect(2, obj.id)
+                sleep(500)
+            end
+        end
+    end
+end
+
+function get_gear()
+    if use_luminous then
+        if bot:getInventory():getItemCount(6848) == 0 then
+            warp(charger, charger_id)
+            sleep(200)
+            take(6848)
+            sleep(200)
+            if bot:getInventory():getItemCount(6848) > 1 then
+                while bot:getInventory():findItem(6848) > 1 do
+                    bot:drop(6848, bot:getInventory():findItem(6848)-1)
+                    sleep(2000)
+
+                end
+            end
+            while not bot:getInventory():getItem(6848).isActive and bot:getInventory():getItemCount(6848) >= 1 do
+                bot:wear(6848)
+                sleep(1500)
+            end
+        end
+    end
+end
+
+function check_tile()
+    local cek = {{x = -1, y = 0}, {x = 0 , y = -1}, {x = 1, y = 0}, {x = 0, y = 1}}
+
+    for _,tule in pairs(cek) do
+        if bot:getWorld():getTile(bot.x+tule.x, bot.y+tule.y).fg == 0 and bot:getWorld():getTile(bot.x+tule.x, bot.y+tule.y).bg == 0 then
+            return {x = bot.x+tule.x, y = bot.y+tule.y}
+        end
+    end
+end
+
+function has_lock()
+    local locks = {242,9640,202,204,206,1796,4994,7188,408,2950,4428, 4802 ,5814,5260,5980,8470,10410,11550,11586}
+
+    for _,tile in pairs(bot:getWorld():getTiles()) do
+        if contains(locks, tile.fg) then
+            return true
+        end
+    end
+    return false
+end
+
+function calculate_fp(ex, ye)
+    local cek = {{x = -1, y = 0}, {x = 0 , y = -1}, {x = 1, y = 0}, {x = 0, y = 1}}
+
+    for _,tule in pairs(cek) do
+        if #bot:getPath(ex+tule.x, ye+tule.y) > 0 then
+            return {x = ex+tule.x, y = ye+tule.y}
+        end
+    end
+end
+
+function geiger_charger(mode)
+    if mode:lower() == "take" then
+        warp(charger, charger_id)
+        sleep(500)
+
+        while bot:getInventory():findItem(2204) == 0 do
+            for _,tile in pairs(bot:getWorld():getTiles()) do
+                if tile.fg == 4654 then
+                    if (tile.flags == 65 or tile.flags == 67) and tile:getExtra().growth >= 3600 then
+                        local pos = calculate_fp(tile.x, tile.y)
+                        if not has_lock() then
+                            take(242)
+                            sleep(500)
+                        end
+                        if not bot:isInTile(pos.x, pos.y) then
+                            bot:findPath(pos.x, pos.y)
+                            sleep(1000)
+                        end
+                        if not has_lock() then
+                            local putnya = check_tile()
+                            while bot:getInventory():findItem(242) > 0 do
+                                bot:place(putnya.x, putnya.y, 242)
+                                sleep(2000)
+                            end
+                        end
+                        bot:hit(tile.x, tile.y)
+                        sleep(1000)
+                    end
+                end
+                if bot:getInventory():findItem(2204) > 0 then
+                    break
+                end
+            end
+        end
+
+        while not bot:getInventory():getItem(2204).isActive and bot:getInventory():getItemCount(2204) >= 1 do
+            bot:wear(2204)
+            sleep(2000)
+        end
+
+        if has_lock() then
+            for _,tile in pairs(bot:getWorld():getTiles()) do
+                if tile.fg == 242 then
+                    local pos = calculate_fp(tile.x, tile.y)
+                    if not isInRadius(tile.x, tile.y, 2) then
+                        bot:findPath(pos.x, pos.y)
+                        sleep(1000)
+                    end
+                    while tile.fg == 242 do
+                        bot:hit(tile.x, tile.y)
+                        sleep(300)
+                    end
+                    break
+                end
+            end
+        end
+    elseif mode:lower() == "put" then
+        local function available_charger()
+            for _,tile in pairs(bot:getWorld():getTiles()) do
+                if tile.fg == 4654 then
+                    if (tile.flags == 1 or tile.flags == 3) then
+                        return true
+                    end
+                end
+            end
+            return false
+        end
+
+        warp(charger, charger_id)
+        sleep(500)
+
+        while bot:getInventory():findItem(2286) > 0 do
+            if available_charger() then
+                for _,tile in pairs(bot:getWorld():getTiles()) do
+                    if tile.fg == 4654 then
+                        if (tile.flags == 1 or tile.flags == 3) then
+                            local pos = calculate_fp(tile.x, tile.y)
+                            if not has_lock() then
+                                take(242)
+                                sleep(500)
+                            end
+
+                            if not bot:isInTile(pos.x, pos.y) then
+                                bot:findPath(pos.x, pos.y)
+                                sleep(1000)
+                            end
+
+                            if not has_lock() then
+                                local putnya = check_tile()
+                                while bot:getInventory():findItem(242) > 0 do
+                                    bot:place(putnya.x, putnya.y, 242)
+                                    sleep(1000)
+                                end
+                            end
+
+                            bot:place(tile.x, tile.y, 2286)
+                            sleep(1000)
+                        end
+                    end
+                    if bot:getInventory():findItem(2286) == 0 then
+                        break
+                    end
+                end
+            else
+                for _,tile in pairs(bot:getWorld():getTiles()) do
+                    if tile.fg == 4654 then
+                        if not bot:isInTile(tile.x-1, tile.y-1) and #bot:getPath(tile.x, tile.y-1) > 0 then
+                            bot:findPath(tile.x-1, tile.y-1)
+                            sleep(1000)
+                        end
+                        bot:drop(2286, bot:getInventory():findItem(2286))
+                        sleep(3000)
+                    end
+                    if bot:getInventory():findItem(2286) == 0 then
+                        break
+                    end
+                end
+            end
+        end
+
+        if has_lock() then
+            for _,tile in pairs(bot:getWorld():getTiles()) do
+                if tile.fg == 242 then
+                    local pos = calculate_fp(tile.x, tile.y)
+                    if not isInRadius(tile.x, tile.y, 2) then
+                        bot:findPath(pos.x, pos.y)
+                        sleep(1000)
+                    end
+                    while tile.fg == 242 do
+                        bot:hit(tile.x, tile.y)
+                        sleep(300)
+                    end
+                    break
+                end
+            end
+        end
+
+        sleep(1500)
+
+        if bot:getInventory():findItem(242) > 0 then
+            while bot:getInventory():findItem(242) > 0 do
+                bot:drop(242, bot:getInventory():findItem(242))
+                sleep(3000)
+            end
+        end
+    end 
+end
+
+function main()
+    while true do
+        for _,player in pairs(bot_list) do
+            local user, pass = player:match("([^:]+):([^:]+)")
+            bot = addBot(user, pass)
+            sleep(500)
+            bot.auto_collect = false
+            bot.auto_reconnect = true
+            sleep(8000)
+            connect()
+
+            get_gear()
+
+            geiger_charger("take")
+
+            while is_valid() do
+                if bot.status == BotStatus.online then
+                    sleep(2500)
+                    process_auto_geiger()
+                    if done then 
+                        done = false
+                        break
+                    end
+                else
+                    sleep(15000)
+                    modDetect()
+                    connect()
+                end
+            end
+
+            geiger_charger("put")
+            sleep(1000)
+            removeBot(bot.name)
+        end
+
+        if not looping then
+            break
+        end
+    end
+end
+
+main()
