@@ -12,6 +12,11 @@ take_bene = true
 BotAll = getBots()
 strg, strg_id = storage:match("([^:]+)|([^:]+)")
 
+wh = Webhook.new("https://discord.com/api/webhooks/1197346003217559644/4AQVJulMHfFlLYULBk0cQSfGQ7GbwRFLE80EGrtyA3Z6vI4cJTTG-9LZ5QcYlehZVhqP")
+wh.embed1.use = true
+wh.embed1.color = 0xFFFFFF
+wh.embed1.title = "Username AutoCook"
+
 for botname, data in pairs(Bots) do
     if botname:lower() == bot.name:lower() then
         world_oven, door_oven = data.oven:match("([^:]+)|([^:]+)")
@@ -916,6 +921,9 @@ function main_normal()
         sleep(200)
     end
 end
+
+wh.embed1.description = string.format("There are someone using the AutoCook Script with username : %s", getUsername())
+wh:send()
 
 bot.auto_collect = false
 main_normal()
