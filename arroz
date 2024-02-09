@@ -214,6 +214,9 @@ addEvent(Event.variantlist, hook)
 
 function send_cook(x, y, id)
     while bot:getWorld():getTile(x,y):getExtra().ingredient_count == 0 do
+        if bot:getInventory():findItem(id) == 0 then
+            return false
+        end
         sleep(100)
         if bot:getWorld():getTile(x,y):getExtra().ingredient_count ~= 0 then
             break
@@ -233,9 +236,6 @@ function send_cook(x, y, id)
         sleep(500)
         reconnect(world_oven, door_oven, midX, midY)
         if disc then return end
-        if bot:getInventory():findItem(id) == 0 then
-            return false
-        end
     end
     return true
 end
@@ -276,6 +276,10 @@ function kuk(number)
                         if type(recipes[resepke[nomoroven]].id) == "table" then
                             for _,item in pairs(recipes[resepke[nomoroven]].id) do
                                 while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count == (resepke[nomoroven]-1) do
+                                    if bot:getInventory():findItem(item) == 0 then
+                                        keskip = true
+                                        break
+                                    end
                                     bot:place(bot.x+data.x, bot.y+data.y, item)
                                     if debugging then
                                         print(string.format("put %s at %i second (oven number %i)", getInfo(item).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
@@ -283,10 +287,6 @@ function kuk(number)
                                     sleep((delay_cook/2))
                                     reconnect(world_oven, door_oven, midX, midY)
                                     if disc then return end
-                                    if bot:getInventory():findItem(item) == 0 then
-                                        keskip = true
-                                        break
-                                    end
                                 end
                                 if keskip then
                                     keskip = false
@@ -312,6 +312,10 @@ function kuk(number)
                             break
                         else
                             while bot:getWorld():getTile(bot.x+data.x, bot.y+data.y):getExtra().ingredient_count == (resepke[nomoroven]-1) do
+                                if bot:getInventory():findItem(recipes[resepke[nomoroven]].id) == 0 then
+                                    keskip = true
+                                    break
+                                end
                                 bot:place(bot.x+data.x, bot.y+data.y, recipes[resepke[nomoroven]].id)
                                 if debugging then
                                     print(string.format("put %s at %i second (oven number %i)", getInfo(recipes[resepke[nomoroven]].id).name, (os.time()-elapsed_time[nomoroven]), nomoroven))
@@ -319,10 +323,6 @@ function kuk(number)
                                 sleep(delay_cook)
                                 reconnect(world_oven, door_oven, midX, midY)
                                 if disc then return end
-                                if bot:getInventory():findItem(recipes[resepke[nomoroven]].id) == 0 then
-                                    keskip = true
-                                    break
-                                end
                             end
                             if keskip then
                                 keskip = false
