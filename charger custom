@@ -174,17 +174,6 @@ function available_put()
     return false
 end
 
-function available_take()
-    for _,tile in pairs(bot:getWorld():getTiles()) do
-        if tile.fg == 4654 then
-            if tile.flags == 65 or tile.flags == 67 then
-                return true
-            end
-        end
-    end
-    return false
-end
-
 function geiger_charger(mode)
     local function calculate_fp(ex, ye)
         local cek = {{x = -1, y = 0}, {x = 0 , y = -1}, {x = 1, y = 0}, {x = 0, y = 1}}
@@ -214,9 +203,6 @@ function geiger_charger(mode)
                         sleep(1000)
                         reconnect(charger, charger_id, pos.x, pos.y)
                     end
-                end
-                if not available_take() then
-                    break
                 end
             end
         end
